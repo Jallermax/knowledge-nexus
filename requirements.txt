@@ -1,0 +1,10 @@
+requests~=2.32.3
+beautifulsoup4~=4.12.3
+langchain~=0.2.5
+langchain-community~=0.2.5
+langchain-core~=0.2.9
+langchain-openai~=0.1.9
+langchain-text-splitters~=0.2.1
+py2neo~=2021.2.4
+python-dotenv~=1.0.1
+PyYAML~=6.0.1
