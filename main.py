@@ -1,6 +1,6 @@
 import logging
-from src.graph_rag.pipeline.data_processing_pipeline import DataProcessingPipeline
-from src.graph_rag.storage.neo4j_manager import Neo4jManager
+from graph_rag.pipeline.data_processing_pipeline import DataProcessingPipeline
+from graph_rag.storage.neo4j_manager import Neo4jManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

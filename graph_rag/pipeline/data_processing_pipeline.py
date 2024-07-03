@@ -1,12 +1,12 @@
 import logging
 from typing import Dict, List
 
-from src.graph_rag.data_model.notion_page import NotionPage, NotionRelation, PageType
-from src.graph_rag.ai_agent.base_agent import BaseAgent
-from src.graph_rag.config.config_manager import Config
-from src.graph_rag.processor.entity_extractor import EntityExtractor
-from src.graph_rag.processor.notion_processor import NotionProcessor
-from src.graph_rag.storage.neo4j_manager import Neo4jManager
+from graph_rag.data_model.notion_page import NotionPage, NotionRelation, PageType
+from graph_rag.ai_agent.base_agent import BaseAgent
+from graph_rag.config.config_manager import Config
+from graph_rag.processor.entity_extractor import EntityExtractor
+from graph_rag.processor.notion_processor import NotionProcessor
+from graph_rag.storage.neo4j_manager import Neo4jManager
 
 logger = logging.getLogger(__name__)
 

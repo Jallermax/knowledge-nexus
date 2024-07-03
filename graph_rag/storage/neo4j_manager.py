@@ -1,6 +1,6 @@
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 
-from src.graph_rag.config.config_manager import Config
+from graph_rag.config.config_manager import Config
 
 
 class Neo4jManager:

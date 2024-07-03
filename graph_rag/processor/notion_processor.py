@@ -2,10 +2,10 @@ import logging
 import re
 from typing import Dict, List
 
-from src.graph_rag.config.config_manager import Config
-from src.graph_rag.data_model.notion_page import NotionPage, get_page_type_from_string, NotionRelation, RelationType, PageType
-from src.graph_rag.data_source.notion_api import NotionAPI
-from src.graph_rag.data_source.web_scraper import get_info_from_url
+from graph_rag.config.config_manager import Config
+from graph_rag.data_model.notion_page import NotionPage, get_page_type_from_string, NotionRelation, RelationType, PageType
+from graph_rag.data_source.notion_api import NotionAPI
+from graph_rag.data_source.web_scraper import get_info_from_url
 
 logger = logging.getLogger(__name__)
 

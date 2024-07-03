@@ -1,7 +1,7 @@
 import time
 
 import requests
-from src.graph_rag.config.config_manager import Config
+from graph_rag.config.config_manager import Config
 
 class NotionAPI:
     def __init__(self):
