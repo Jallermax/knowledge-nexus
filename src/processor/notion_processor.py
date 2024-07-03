@@ -6,8 +6,6 @@ from data_model.notion_page import NotionPage, get_page_type_from_string, Notion
 from data_source.web_scraper import get_info_from_url
 from src.data_source.notion_api import NotionAPI
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
 def _extract_uuid(href):
     pattern = r"(https:\/\/www\.notion\.so)?/([a-zA-Z0-9\-]+/)?([a-zA-Z0-9\-]+-)?([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})(\?[a-zA-Z0-9%=\-&]*)?"

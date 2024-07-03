@@ -1,5 +1,8 @@
+import logging
 from src.pipeline.data_processing_pipeline import DataProcessingPipeline
 from storage.neo4j_manager import Neo4jManager
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def main():

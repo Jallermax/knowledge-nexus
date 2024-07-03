@@ -61,7 +61,7 @@ Knowledge Nexus is primarily designed for individual users who:
 ## 🛠️ TODO: Implementation Steps
 
 1. Data preparation
-    - [ ] Prepare personal context
+    - [X] Prepare personal context
     - [ ] Export Notion Database as a zip file
       - [ ] Prepare Notion system structure, tags, projects 
     - [ ] Export Pocket articles
@@ -71,7 +71,7 @@ Knowledge Nexus is primarily designed for individual users who:
     - [ ] Prepare Todoist tags, projects and structure
 
 2. Data Source Integration
-    - [ ] Implement [Notion API](https://developers.notion.com/reference/get-database) client
+    - [X] Implement [Notion API](https://developers.notion.com/reference/get-database) client
     - [ ] Implement Notion exported zip parser
     - [ ] Develop Pocket exported file parser
     - [ ] Develop Pocket API integration
@@ -87,8 +87,8 @@ Knowledge Nexus is primarily designed for individual users who:
     - [ ] Create content embeddings for semantic search
 
 4. Knowledge Graph Management
-    - [ ] Set up Neo4j database integration
-    - [ ] Implement node and relationship creation logic
+    - [X] Set up Neo4j database integration
+    - [X] Implement node and relationship creation logic
     - [ ] Develop query methods for retrieving related content
     - [ ] Create visualizations for the knowledge graph
 
@@ -125,9 +125,6 @@ Knowledge Nexus is currently a personal project, but ideas and suggestions are w
 
 ## 🔒 Privacy and Data Handling
 Knowledge Nexus is designed with your privacy in mind. All data is stored locally on your machine. The only external service used is OpenAI's API for AI processing, which is subject to their privacy policy and data handling practices.
-
-## 📜 License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ---
 
