@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class DataProcessingPipeline:
     def __init__(self):
+        self.config = Config()
         self.notion_processor = NotionProcessor()
         self.entity_extractor = EntityExtractor()
         self.neo4j_manager = Neo4jManager()
@@ -29,13 +30,45 @@ class DataProcessingPipeline:
         for page in prepared_pages.values():
             self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source)
 
-        """ Cleaning up relations without existing pages """
-        relations = [relation for relation in relations if relation.from_page_id in prepared_pages and relation.to_page_id in prepared_pages]
+        if self.config.NOTION_CREATE_UNPROCESSED_NODES:
+            self.add_missing_pages(prepared_pages, relations)
+        else:
+            """ Cleaning up relations without existing pages """
+            relations_count_before = len(relations)
+            relations = [relation for relation in relations if
+                         relation.from_page_id in prepared_pages and relation.to_page_id in prepared_pages]
+            logger.info(f"{len(relations) - relations_count_before} Relations with unprocessed pages was deleted")
 
         for relation in relations:
             self.neo4j_manager.link_entities(relation.from_page_id, relation.to_page_id, relation.relation_type.value, relation.context)
 
-        logging.info("Notion structure has been parsed and stored in Neo4j.")
+        logger.info("Notion structure has been parsed and stored in Neo4j.")
+
+    def add_missing_pages(self, prepared_pages: Dict[str, NotionPage], relations: List[NotionRelation]):
+        logger.info("Adding unprocessed pages from relations to prepared_pages")
+        missing_page_count = 0
+        for relation in relations:
+            if relation.from_page_id not in prepared_pages:
+                self.add_missing_page(relation.from_page_id, prepared_pages)
+                missing_page_count += 1
+
+            if relation.to_page_id not in prepared_pages:
+                self.add_missing_page(relation.to_page_id, prepared_pages)
+                missing_page_count += 1
+        logger.info(f"{missing_page_count} unprocessed pages from relations was added to graph")
+
+    def add_missing_page(self, page_id: str, prepared_pages: Dict[str, NotionPage]):
+        new_page = NotionPage(
+            page_id=page_id,
+            title="Unprocessed",
+            page_type=PageType.PAGE,
+            url='',
+            source='Notion'
+        )
+        logger.info(f"Adding unprocessed page {page_id}")
+        self.neo4j_manager.create_page_node(new_page.id, new_page.title, new_page.type.value, new_page.content, new_page.url,
+                                            new_page.source)
+        prepared_pages[page_id] = new_page
 
     def process_content(self, content_data):
         page_id = content_data['page_id']
