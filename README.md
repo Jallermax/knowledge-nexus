@@ -44,7 +44,12 @@ Knowledge Nexus is primarily designed for individual users who:
 
 ## 🛠 Getting Started
 
-***TBD***
+1. install neo4j
+2. install python
+3. make and configure .env in root directory
+4. input root `notion_page_id` into `main.py` from where to start the graph
+5. `pip install -r requirements.txt`
+6. `python main.py`
 
 ## 🔮 Future Enhancements
 
@@ -72,6 +77,7 @@ Knowledge Nexus is primarily designed for individual users who:
 
 2. Data Source Integration
     - [X] Implement [Notion API](https://developers.notion.com/reference/get-database) client
+    - [ ] Notion: Process only pages with last_edited_time > than last_edited_time in graph
     - [ ] Implement Notion exported zip parser
     - [ ] Develop Pocket exported file parser
     - [ ] Develop Pocket API integration

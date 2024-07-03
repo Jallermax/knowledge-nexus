@@ -24,6 +24,10 @@ def _extract_title(page_content: dict):
     if 'title' in page_content and page_content['title']:
         return page_content['title'][0]['plain_text']
     else:
+        for prop_name in page_content['properties']:
+            prop = page_content['properties'][prop_name]
+            if prop['type'] == 'title' and 'title' in prop and prop['title']:
+                return prop['title'][0]['plain_text']
         return 'Untitled'
 
 
@@ -61,6 +65,7 @@ class NotionProcessor:
         is_database = page_info['object'] == 'database'
         logger.debug(f"[Depth={recursive_depth}] Recursively processing page: {page_info['id']}, is_database: {is_database}")
         if is_database:
+            # TODO parse mentions in db title
             child_db_pages = self.notion_api.get_all_database_items(page_info['id'])
             for child_page in child_db_pages:
                 self.page_relations.append(NotionRelation(page_info['id'], RelationType.CONTAINS, child_page['id']))
@@ -114,6 +119,7 @@ class NotionProcessor:
             'to_do',
             'toggle',
         ]
+
         if block['type'] in ['child_page', 'child_database']:
             self.page_relations.append(NotionRelation(parent_id, RelationType.CONTAINS, block['id']))
             self.recursive_process_unprocessed_page(block['id'], block['type'] == 'child_database', recursive_depth=recursive_depth)
@@ -139,6 +145,7 @@ class NotionProcessor:
                         self.process_unprocessed_bookmark(text['href'], recursive_depth=recursive_depth)
 
         elif block['type'] in url_block_types:
+            # TODO parse mentions in captions (where supported)
             url = block[block['type']]['url']
             self.page_relations.append(NotionRelation(parent_id, RelationType.REFERENCES, url))
             self.process_unprocessed_bookmark(url)
