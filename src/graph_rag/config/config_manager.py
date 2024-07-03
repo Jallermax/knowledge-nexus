@@ -1,7 +1,9 @@
 import os
+from typing import Dict, Any
+
 import yaml
 from dotenv import load_dotenv
-from typing import Dict, Any
+
 
 class Config:
     def __init__(self):
@@ -19,6 +21,9 @@ class Config:
         # Notion API configuration
         self.NOTION_API_BASE_URL: str = config_data['notion_api']['base_url']
         self.NOTION_API_VERSION: str = config_data['notion_api']['version']
+        self.NOTION_API_TIMEOUT: int = config_data['notion_api']['timeout']
+        self.NOTION_PAGE_MAX_DEPTH: int = config_data['notion_api']['page_max_depth']
+        self.NOTION_CREATE_UNPROCESSED_NODES: bool = config_data['notion_api']['create_unprocessed_graph_nodes']
 
         # Pocket API configuration
         self.POCKET_API_BASE_URL: str = config_data['pocket_api']['base_url']
@@ -47,6 +52,7 @@ class Config:
         for k in keys:
             value = value.get(k, {})
         return value if value != {} else default
+
 
 # Usage example:
 if __name__ == "__main__":

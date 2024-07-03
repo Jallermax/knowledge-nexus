@@ -1,8 +1,15 @@
 import logging
-from src.processor.notion_processor import NotionProcessor
-from src.processor.entity_extractor import EntityExtractor
-from src.storage.neo4j_manager import Neo4jManager
-from src.ai_agent.base_agent import BaseAgent
+from typing import Dict, List
+
+from src.graph_rag.data_model.notion_page import NotionPage, NotionRelation, PageType
+from src.graph_rag.ai_agent.base_agent import BaseAgent
+from src.graph_rag.config.config_manager import Config
+from src.graph_rag.processor.entity_extractor import EntityExtractor
+from src.graph_rag.processor.notion_processor import NotionProcessor
+from src.graph_rag.storage.neo4j_manager import Neo4jManager
+
+logger = logging.getLogger(__name__)
+
 
 class DataProcessingPipeline:
     def __init__(self):
@@ -15,9 +22,9 @@ class DataProcessingPipeline:
         # Process the Notion page
         self.notion_processor.process_pages(page_id)
         prepared_pages = self.notion_processor.prepared_pages
-        logging.info(f"Prepared {len(prepared_pages.keys())} pages from Notion")
+        logger.info(f"Prepared {len(prepared_pages)} pages from Notion")
         relations = self.notion_processor.page_relations
-        logging.info(f"Prepared {len(relations)} relations from Notion")
+        logger.info(f"Prepared {len(relations)} relations from Notion")
 
         for page in prepared_pages.values():
             self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source)

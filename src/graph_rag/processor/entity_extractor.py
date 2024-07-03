@@ -1,8 +1,18 @@
 import spacy
+from spacy.cli import download
+
+
+def load_spacy_model(model_name: str):
+    try:
+        return spacy.load(model_name)
+    except OSError:
+        print(f"Downloading the {model_name} model...")
+        download(model_name)
+        return spacy.load(model_name)
 
 class EntityExtractor:
     def __init__(self):
-        self.nlp = spacy.load("en_core_web_sm")
+        self.nlp = load_spacy_model("en_core_web_sm")
 
     def extract_entities(self, text):
         doc = self.nlp(text)

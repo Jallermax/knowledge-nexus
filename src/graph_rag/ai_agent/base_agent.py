@@ -1,5 +1,5 @@
 import openai
-from src.config.config_manager import Config
+from src.graph_rag.config.config_manager import Config
 
 class BaseAgent:
     def __init__(self):

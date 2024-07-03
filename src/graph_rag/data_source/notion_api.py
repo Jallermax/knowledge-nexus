@@ -1,7 +1,7 @@
 import time
 
 import requests
-from src.config.config_manager import Config
+from src.graph_rag.config.config_manager import Config
 
 class NotionAPI:
     def __init__(self):
@@ -16,7 +16,7 @@ class NotionAPI:
 
     def get_page_metadata(self, page_id):
         url = f"{self.base_url}pages/{page_id}"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers, timeout=self.config.NOTION_API_TIMEOUT)
         if response.status_code == 200:
             return response.json()
         else:
@@ -27,7 +27,7 @@ class NotionAPI:
         if start_cursor:
             url += "&start_cursor=" + start_cursor
 
-        response = requests.get(url, headers=self.headers, timeout=50)
+        response = requests.get(url, headers=self.headers, timeout=self.config.NOTION_API_TIMEOUT)
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 503 and first_call:
@@ -53,7 +53,7 @@ class NotionAPI:
 
     def get_database_metadata(self, database_id):
         url = f"{self.base_url}databases/{database_id}"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers, timeout=self.config.NOTION_API_TIMEOUT)
         if response.status_code == 200:
             return response.json()
         else:
@@ -67,7 +67,7 @@ class NotionAPI:
         if start_cursor:
             payload["start_cursor"] = start_cursor
 
-        response = requests.post(url, headers=self.headers, json=payload)
+        response = requests.post(url, headers=self.headers, json=payload, timeout=self.config.NOTION_API_TIMEOUT)
         if response.status_code == 200:
             return response.json()
         else:
