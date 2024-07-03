@@ -8,7 +8,7 @@ class Config:
         load_dotenv()  # Load environment variables from .env file
 
         # Load constants from environment variables
-        self.API_KEY: str = os.getenv('API_KEY', '')
+        self.API_KEY: str = os.getenv('NOTION_API_KEY', '')
         self.DATABASE_URL: str = os.getenv('DATABASE_URL', '')
         self.CACHE_DIR: str = os.getenv('CACHE_DIR', '')
 
@@ -29,10 +29,9 @@ class Config:
         self.LLM_MAX_TOKENS: int = config_data['llm']['max_tokens']
 
         # Neo4j configuration
-        self.NEO4J_HOST: str = config_data['neo4j']['host']
-        self.NEO4J_PORT: int = config_data['neo4j']['port']
-        self.NEO4J_USER: str = config_data['neo4j']['user']
-        self.NEO4J_PASSWORD: str = config_data['neo4j']['password']
+        self.NEO4J_URI: str = os.getenv('NEO4J_URI', 'bolt://localhost:7687')
+        self.NEO4J_USER: str = os.getenv('NEO4J_USER', 'neo4j')
+        self.NEO4J_PASSWORD: str = os.getenv('NEO4J_PASSWORD', 'password')
 
         # Cache configuration
         self.CACHE_EXPIRATION_TIME: int = config_data['cache']['expiration_time']
@@ -54,5 +53,5 @@ if __name__ == "__main__":
     config = Config()
     print(f"Notion API Base URL: {config.NOTION_API_BASE_URL}")
     print(f"LLM Model: {config.LLM_MODEL}")
-    print(f"Neo4j Host: {config.NEO4J_HOST}")
+    print(f"Neo4j Host: {config.NEO4J_URI}")
     # You can still use the get_config method for flexibility

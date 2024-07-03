@@ -1,7 +1,8 @@
-from src.processors.notion_processor import NotionProcessor
-from src.processors.entity_extractor import EntityExtractor
+import logging
+from src.processor.notion_processor import NotionProcessor
+from src.processor.entity_extractor import EntityExtractor
 from src.storage.neo4j_manager import Neo4jManager
-from src.ai_agents.base_agent import BaseAgent
+from src.ai_agent.base_agent import BaseAgent
 
 class DataProcessingPipeline:
     def __init__(self):
@@ -12,10 +13,22 @@ class DataProcessingPipeline:
 
     def process_notion_page(self, page_id):
         # Process the Notion page
-        page_data = self.notion_processor.process_page(page_id)
+        self.notion_processor.process_pages(page_id)
+        prepared_pages = self.notion_processor.prepared_pages
+        logging.info(f"Prepared {len(prepared_pages.keys())} pages from Notion")
+        relations = self.notion_processor.page_relations
+        logging.info(f"Prepared {len(relations)} relations from Notion")
 
-        # Process the extracted data
-        return self.process_content(page_data)
+        for page in prepared_pages.values():
+            self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source)
+
+        """ Cleaning up relations without existing pages """
+        relations = [relation for relation in relations if relation.from_page_id in prepared_pages and relation.to_page_id in prepared_pages]
+
+        for relation in relations:
+            self.neo4j_manager.link_entities(relation.from_page_id, relation.to_page_id, relation.relation_type.value, relation.context)
+
+        logging.info("Notion structure has been parsed and stored in Neo4j.")
 
     def process_content(self, content_data):
         page_id = content_data['page_id']
