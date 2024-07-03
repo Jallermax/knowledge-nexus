@@ -30,6 +30,8 @@ class DataProcessingPipeline:
         for page in prepared_pages.values():
             self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source)
 
+        # TODO check existing pages not only in prepared_pages, but in neo4j as well
+
         if self.config.NOTION_CREATE_UNPROCESSED_NODES:
             self.add_missing_pages(prepared_pages, relations)
         else:

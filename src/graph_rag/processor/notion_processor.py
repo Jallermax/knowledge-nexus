@@ -23,10 +23,6 @@ def _extract_uuid(href):
 def _extract_title(page_content: dict):
     if 'title' in page_content and page_content['title']:
         return page_content['title'][0]['plain_text']
-    elif 'Name' in page_content['properties'] and page_content['properties']['Name']['title']:
-        return page_content['properties']['Name']['title'][0]['plain_text']
-    elif 'Page' in page_content['properties'] and page_content['properties']['Page']['title']:
-        return page_content['properties']['Page']['title'][0]['plain_text']
     else:
         return 'Untitled'
 
@@ -58,7 +54,7 @@ class NotionProcessor:
         If is_database, then make additional call of get_all_database_items to get all db pages
         """
         recursive_depth += 1
-        if recursive_depth > self.config.NOTION_PAGE_MAX_DEPTH:
+        if recursive_depth >= self.config.NOTION_PAGE_MAX_DEPTH:
             logger.warning(
                 f"Current recursion depth {recursive_depth} for processing pages exceeded depth limit. See notion_api.page_max_depth in config.yaml")
             return
@@ -75,7 +71,8 @@ class NotionProcessor:
         try:
             child_blocks = self.notion_api.get_all_content_blocks(page_info['id'])
         except Exception as e:
-            logger.exception(f"[Depth={recursive_depth}] Exception occurred during fetching of page {page_info['id']} blocks")
+            logger.error(f"[Depth={recursive_depth}] Exception occurred during fetching of page {page_info['id']} blocks: {e}")
+            logger.debug(f"Stack_trace for {page_info['id']} exception", stack_info=True, stacklevel=15)
             return
         for block in child_blocks:
             self.recursive_process_block(block, parent_id=page_info['id'], recursive_depth=recursive_depth)
@@ -154,10 +151,11 @@ class NotionProcessor:
             try:
                 child_blocks = self.notion_api.get_all_content_blocks(block['id'])
             except Exception as e:
-                logger.exception(f"[Depth={recursive_depth}] Exception occurred during fetching of page {block['id']} blocks")
+                logger.error(f"[Depth={recursive_depth}] Exception occurred during fetching of page {block['id']} blocks: {e}")
+                logger.debug(f"Stack_trace for {block['id']} exception", stack_info=True, stacklevel=15)
                 return
             for child_block in child_blocks:
-                self.recursive_process_block(child_block, parent_id)
+                self.recursive_process_block(child_block, parent_id, recursive_depth)
 
     def process_unprocessed_bookmark(self, url: str, recursive_depth: int = 0):
         recursive_depth += 1
@@ -184,7 +182,8 @@ class NotionProcessor:
                     page_info = self.notion_api.get_page_metadata(page_id)
             except Exception as e:
                 # TODO Is it needed to add page to prepared_pages if it failed to get page info? To keep consistent relations
-                logger.exception(f"[Depth={recursive_depth}] Failed to get page info for page: {page_id}")
+                logger.error(f"[Depth={recursive_depth}] Failed to get page info for page: {page_id}: {e}")
+                logger.debug(f"Stack_trace for {page_id} exception", stack_info=True, stacklevel=15)
                 return
 
         page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']), page_info['url'])
