@@ -50,6 +50,35 @@ class NotionAPI:
 
         return all_items
 
+    def get_page_properties(self, page_id, property_id, first_call=True, start_cursor=None, page_size=100):
+        url = f"{self.base_url}pages/{page_id}/properties/{property_id}?page_size={page_size}"
+        if start_cursor:
+            url += "&start_cursor=" + start_cursor
+
+        response = requests.get(url, headers=self.headers, timeout=self.config.NOTION_API_TIMEOUT)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 503 and first_call:
+            print("Retrying after 1 second...")
+            time.sleep(1)
+            return self.get_page_properties(page_id, property_id, first_call=False, start_cursor=start_cursor, page_size=page_size)
+        else:
+            raise Exception(f"Failed to fetch page properties: {response.status_code} - {response.text}\nurl={url}")
+
+    def get_all_page_properties(self, page_id, property_id):
+        all_items = []
+        has_more = True
+        start_cursor = None
+
+        while has_more:
+            response = self.get_page_properties(page_id, property_id, start_cursor=start_cursor)
+            all_items.extend(response['results'])
+            has_more = response['has_more']
+            start_cursor = response.get('next_cursor')
+
+        return all_items
+
+
     def get_database_metadata(self, database_id):
         url = f"{self.base_url}databases/{database_id}"
         response = requests.get(url, headers=self.headers, timeout=self.config.NOTION_API_TIMEOUT)

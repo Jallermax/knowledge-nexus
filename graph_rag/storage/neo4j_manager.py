@@ -1,6 +1,10 @@
+import logging
+
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 
 from graph_rag.config.config_manager import Config
+
+logger = logging.getLogger(__name__)
 
 
 class Neo4jManager:
@@ -14,13 +18,15 @@ class Neo4jManager:
 
     def clean_database(self):
         self.graph.query("MATCH (n) DETACH DELETE n")
+        logger.info("Database has been cleaned")
 
     def create_page_node(self, page_id, title, node_type, content, url, source, last_edited_time):
         query = (
             f"MERGE (p:{node_type} {{id: $page_id}}) "
             "SET p.title = $title, p.content = $content, p.url = $url, p.source = $source, p.last_edited_time = $last_edited_time"
         )
-        self.graph.query(query, {'page_id': page_id, 'title': title, 'content': content, 'url': url, 'source': source, 'last_edited_time': last_edited_time})
+        self.graph.query(query, {'page_id': page_id, 'title': title, 'content': content, 'url': url, 'source': source,
+                                 'last_edited_time': last_edited_time})
 
     def create_entity_node(self, entity_type, entity_name):
         query = (
