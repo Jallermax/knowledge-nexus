@@ -12,7 +12,6 @@ class Config:
         # Load constants from environment variables
         self.API_KEY: str = os.getenv('NOTION_API_KEY', '')
         self.DATABASE_URL: str = os.getenv('DATABASE_URL', '')
-        self.CACHE_DIR: str = os.getenv('CACHE_DIR', '')
 
         # Load configuration from config.yaml
         with open('config/config.yaml', 'r') as config_file:
@@ -39,7 +38,8 @@ class Config:
         self.NEO4J_PASSWORD: str = os.getenv('NEO4J_PASSWORD', 'password')
 
         # Cache configuration
-        self.CACHE_EXPIRATION_TIME: int = config_data['cache']['expiration_time']
+        self.CACHE_ENABLED: int = config_data['cache']['enabled']
+        self.CACHE_PATH: str = config_data['cache']['path_to_cache']
 
     def get_config(self, key: str, default: Any = None) -> Any:
         """

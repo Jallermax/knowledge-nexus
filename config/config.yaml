@@ -15,4 +15,5 @@ llm:
   max_tokens: 150
 
 cache:
-  expiration_time: 3600  # in seconds
+  enabled: true
+  path_to_cache: cache/

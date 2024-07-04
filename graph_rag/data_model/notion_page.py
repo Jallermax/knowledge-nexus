@@ -1,4 +1,8 @@
+from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
+
+from graph_rag.data_model.cacheable import Cacheable
 
 
 class RelationType(Enum):
@@ -16,20 +20,32 @@ def get_page_type_from_string(page_type_str: str) -> PageType:
     return PageType[page_type_str.upper()]
 
 
-class NotionPage:
-    def __init__(self, page_id: str, title: str, page_type: PageType, url: str, content: str = None, source: str = 'Notion', last_edited_time: str = None):
-        self.id: str = page_id
-        self.title: str = title
-        self.type: PageType = page_type
-        self.url: str = url
-        self.content: str = content
-        self.source: str = source
-        self.last_edited_time = last_edited_time
+def get_relation_type_from_string(relation_type_str: str) -> RelationType:
+    return RelationType[relation_type_str.upper()]
 
 
-class NotionRelation:
-    def __init__(self, from_page_id: str, relation_type: RelationType, to_page_id: str, context: str = None):
-        self.from_page_id: str = from_page_id
-        self.relation_type: RelationType = relation_type
-        self.to_page_id: str = to_page_id
-        self.context: str = context
+@dataclass
+class NotionPage(Cacheable):
+    id: str
+    title: str
+    type: PageType
+    url: str
+    content: Optional[str] = None
+    source: str = 'Notion'
+    last_edited_time: Optional[str] = None
+
+    @classmethod
+    def get_class_version(cls) -> int:
+        return 1
+
+
+@dataclass
+class NotionRelation(Cacheable):
+    from_page_id: str
+    relation_type: RelationType
+    to_page_id: str
+    context: Optional[str] = None
+
+    @classmethod
+    def get_class_version(cls) -> int:
+        return 1

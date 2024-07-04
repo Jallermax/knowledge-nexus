@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from typing import Dict, List
 
@@ -6,6 +7,7 @@ from graph_rag.config.config_manager import Config
 from graph_rag.data_model.notion_page import NotionPage, get_page_type_from_string, NotionRelation, RelationType, PageType
 from graph_rag.data_source.notion_api import NotionAPI
 from graph_rag.data_source.web_scraper import get_info_from_url
+from graph_rag.utils.cache_util import load_model_cache, save_model_cache
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +43,33 @@ class NotionProcessor:
         self.config = Config()
         self.prepared_pages: Dict[str, NotionPage] = {}
         self.page_relations: List[NotionRelation] = []
+        os.makedirs(self.config.CACHE_PATH, exist_ok=True)
         logger.info("NotionProcessor initialized")
 
     def process_pages(self, root_page_id: str):
+        if self.config.CACHE_ENABLED:
+            try:
+                prepared_pages_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'), NotionPage, root_page_id)
+                self.prepared_pages = {page_id: NotionPage.from_dict(page_data) for page_id, page_data in prepared_pages_cache.items()}
+
+                page_relations_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'), NotionRelation, root_page_id)
+                self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data in page_relations_cache]
+                print("Loaded data from cache.")
+                return
+            except Exception as e:
+                print(f"Failed to load cache: {e}. Running the ingestion process.")
+
         logger.info(f"Processing root page: {root_page_id}")
         root_page = self.notion_api.get_root_page_info(root_page_id)
         notion_page = NotionPage(root_page['id'], _extract_title(root_page), get_page_type_from_string(root_page['object']),
                                  root_page['url'], last_edited_time=root_page['last_edited_time'])
         self.prepared_pages.update({root_page['id']: notion_page})
         self.recursive_process_page_children(root_page)
+
+        if self.config.CACHE_ENABLED:
+            save_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'), {page_id: page.to_dict() for page_id, page in self.prepared_pages.items()}, NotionPage, root_page_id)
+            save_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'), [relation.to_dict() for relation in self.page_relations], NotionRelation, root_page_id)
+            print("Saved data to cache.")
 
     def recursive_process_page_children(self, page_info: dict, recursive_depth: int = 0):
         """
@@ -99,7 +119,6 @@ class NotionProcessor:
         self.process_unprocessed_bookmark(url, recursive_depth=recursive_depth)
 
     def recursive_process_block(self, block: dict, parent_id: str, recursive_depth: int = 0):
-        recursive_depth += 1
         logger.debug(f"[Depth={recursive_depth}] Recursively parsing block: {block['id']}, parent_id: {parent_id}")
         unsupported_block_types = [
             'breadcrumb',
@@ -200,14 +219,13 @@ class NotionProcessor:
                     )
 
     def process_unprocessed_bookmark(self, url: str, recursive_depth: int = 0):
-        recursive_depth += 1
-        logger.debug(f"[Depth={recursive_depth}] Recursively parsing bookmark: {url}")
         if url not in self.prepared_pages.keys():
             try:
                 title, description = get_info_from_url(url)
             except:
                 title, description = '', ''
             bookmark_page = NotionPage(url, title, PageType.BOOKMARK, url, content=description, source='Web')
+            logger.info(f"[Depth={recursive_depth}] Adding new processed bookmark[{len(self.prepared_pages)}]: [{title}]({url})")
             self.prepared_pages.update({url: bookmark_page})
 
     def recursive_process_unprocessed_page(self, page_id: str, is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):

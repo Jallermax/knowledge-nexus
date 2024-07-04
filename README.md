@@ -89,7 +89,7 @@ Knowledge Nexus is primarily designed for individual users who:
     - [ ] Implement entity extraction using NLP techniques
     - [ ] Develop an insight generation module using LLMs
     - [ ] Create a content summarization feature
-    - [ ] Add file caching of raw and processed content
+    - [X] Add file caching of raw and processed content
     - [ ] Create content embeddings for semantic search
 
 4. Knowledge Graph Management
