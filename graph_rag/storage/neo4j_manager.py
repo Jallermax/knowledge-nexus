@@ -15,12 +15,12 @@ class Neo4jManager:
     def clean_database(self):
         self.graph.query("MATCH (n) DETACH DELETE n")
 
-    def create_page_node(self, page_id, title, node_type, content, url, source):
+    def create_page_node(self, page_id, title, node_type, content, url, source, last_edited_time):
         query = (
             f"MERGE (p:{node_type} {{id: $page_id}}) "
-            "SET p.title = $title, p.content = $content, p.url = $url, p.source = $source"
+            "SET p.title = $title, p.content = $content, p.url = $url, p.source = $source, p.last_edited_time = $last_edited_time"
         )
-        self.graph.query(query, {'page_id': page_id, 'title': title, 'content': content, 'url': url, 'source': source})
+        self.graph.query(query, {'page_id': page_id, 'title': title, 'content': content, 'url': url, 'source': source, 'last_edited_time': last_edited_time})
 
     def create_entity_node(self, entity_type, entity_name):
         query = (

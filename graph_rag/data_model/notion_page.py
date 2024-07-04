@@ -17,13 +17,14 @@ def get_page_type_from_string(page_type_str: str) -> PageType:
 
 
 class NotionPage:
-    def __init__(self, page_id: str, title: str, page_type: PageType, url: str, content: str = None, source: str = 'Notion'):
+    def __init__(self, page_id: str, title: str, page_type: PageType, url: str, content: str = None, source: str = 'Notion', last_edited_time: str = None):
         self.id: str = page_id
         self.title: str = title
         self.type: PageType = page_type
         self.url: str = url
         self.content: str = content
         self.source: str = source
+        self.last_edited_time = last_edited_time
 
 
 class NotionRelation:

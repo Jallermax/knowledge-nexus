@@ -28,7 +28,7 @@ class DataProcessingPipeline:
         logger.info(f"Prepared {len(relations)} relations from Notion")
 
         for page in prepared_pages.values():
-            self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source)
+            self.save_notion_page(page)
 
         # TODO check existing pages not only in prepared_pages, but in neo4j as well
 
@@ -45,6 +45,9 @@ class DataProcessingPipeline:
             self.neo4j_manager.link_entities(relation.from_page_id, relation.to_page_id, relation.relation_type.value, relation.context)
 
         logger.info("Notion structure has been parsed and stored in Neo4j.")
+
+    def save_notion_page(self, page):
+        self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source, page.last_edited_time)
 
     def add_missing_pages(self, prepared_pages: Dict[str, NotionPage], relations: List[NotionRelation]):
         logger.info("Adding unprocessed pages from relations to prepared_pages")
@@ -68,8 +71,7 @@ class DataProcessingPipeline:
             source='Notion'
         )
         logger.info(f"Adding unprocessed page {page_id}")
-        self.neo4j_manager.create_page_node(new_page.id, new_page.title, new_page.type.value, new_page.content, new_page.url,
-                                            new_page.source)
+        self.save_notion_page(new_page)
         prepared_pages[page_id] = new_page
 
     def process_content(self, content_data):

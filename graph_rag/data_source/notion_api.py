@@ -34,7 +34,6 @@ class NotionAPI:
             print("Retrying after 1 second...")
             time.sleep(1)
             return self.get_page_content_blocks(page_id, first_call=False, start_cursor=start_cursor, page_size=page_size)
-        # TODO extract response handling and handle 400/404 with json/response.message
         else:
             raise Exception(f"Failed to fetch block children: {response.status_code} - {response.text}\nurl={url}")
 

@@ -47,7 +47,7 @@ class NotionProcessor:
         logger.info(f"Processing root page: {root_page_id}")
         root_page = self.notion_api.get_root_page_info(root_page_id)
         notion_page = NotionPage(root_page['id'], _extract_title(root_page), get_page_type_from_string(root_page['object']),
-                                 root_page['url'])
+                                 root_page['url'], last_edited_time=root_page['last_edited_time'])
         self.prepared_pages.update({root_page['id']: notion_page})
         self.recursive_process_page_children(root_page)
 
@@ -188,12 +188,12 @@ class NotionProcessor:
                 else:
                     page_info = self.notion_api.get_page_metadata(page_id)
             except Exception as e:
-                # TODO Is it needed to add page to prepared_pages if it failed to get page info? To keep consistent relations
                 logger.error(f"[Depth={recursive_depth}] Failed to get page info for page: {page_id}: {e}")
                 logger.debug(f"Stack_trace for {page_id} exception", stack_info=True, stacklevel=15)
                 return
 
-        page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']), page_info['url'])
+        # TODO don't save page only if already exists in neo4j and last_edited_time is not greater than in neo4j
+        page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']), page_info['url'], last_edited_time=page_info['last_edited_time'])
         logger.info(f"[Depth={recursive_depth}] Adding new processed page: {page.title}({page.type};{page.id})")
         self.prepared_pages.update({page_id: page})
         if page_info['archived'] or page_info['in_trash']:
