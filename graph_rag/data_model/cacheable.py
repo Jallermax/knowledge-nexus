@@ -5,6 +5,7 @@ from typing import Type, TypeVar, Dict, Any, get_args, get_origin, Union
 
 T = TypeVar('T', bound='Cacheable')
 
+
 @dataclass
 class Cacheable(ABC):
 
@@ -37,8 +38,7 @@ class Cacheable(ABC):
 
     @classmethod
     @abstractmethod
-    def get_class_version(cls) -> int:
-        pass
+    def get_class_version(cls) -> int: ...
 
     @classmethod
     def check_version(cls: Type[T], data_version: int):

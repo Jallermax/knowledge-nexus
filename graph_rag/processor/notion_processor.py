@@ -49,11 +49,8 @@ class NotionProcessor:
     def process_pages(self, root_page_id: str):
         if self.config.CACHE_ENABLED:
             try:
-                prepared_pages_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'), NotionPage, root_page_id)
-                self.prepared_pages = {page_id: NotionPage.from_dict(page_data) for page_id, page_data in prepared_pages_cache.items()}
-
-                page_relations_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'), NotionRelation, root_page_id)
-                self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data in page_relations_cache]
+                self.load_prepared_pages_from_cache(root_page_id)
+                self.load_page_relations_from_cache(root_page_id)
                 print("Loaded data from cache.")
                 return
             except Exception as e:
@@ -67,27 +64,49 @@ class NotionProcessor:
         self.recursive_process_page_children(root_page)
 
         if self.config.CACHE_ENABLED:
-            save_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'), {page_id: page.to_dict() for page_id, page in self.prepared_pages.items()}, NotionPage, root_page_id)
-            save_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'), [relation.to_dict() for relation in self.page_relations], NotionRelation, root_page_id)
+            self.save_prepared_pages_to_cache(root_page_id)
+            self.save_page_relations_to_cache(root_page_id)
             print("Saved data to cache.")
+
+    def save_prepared_pages_to_cache(self, root_page_id):
+        save_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'),
+                         {page_id: page.to_dict() for page_id, page in self.prepared_pages.items()}, NotionPage,
+                         root_page_id)
+
+    def load_prepared_pages_from_cache(self, root_page_id):
+        prepared_pages_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'),
+                                                NotionPage, root_page_id)
+        self.prepared_pages = {page_id: NotionPage.from_dict(page_data) for page_id, page_data
+                               in prepared_pages_cache.items()}
+
+    def save_page_relations_to_cache(self, root_page_id):
+        save_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'),
+                         [relation.to_dict() for relation in self.page_relations], NotionRelation, root_page_id)
+
+    def load_page_relations_from_cache(self, root_page_id):
+        page_relations_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'),
+                                                NotionRelation, root_page_id)
+        self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data
+                               in page_relations_cache]
 
     def recursive_process_page_children(self, page_info: dict, recursive_depth: int = 0):
         """
-        Recursively process all blocks of the given page and its sub-pages if this page hasn't been processed before (not in self.processed_pages).
-        Add every proccesed sub-page into processed_pages and add relation to page_relations
-        If is_database, then make additional call of get_all_database_items to get all db pages
+        Recursively process all blocks of the given page and its sub-pages if this page hasn't been processed before
+        (not in self.processed_pages). Add every processed sub-page into processed_pages and add relation to
+        page_relations If is_database, then make additional call of get_all_database_items to get all db pages
         """
         recursive_depth += 1
         if recursive_depth >= self.config.NOTION_PAGE_MAX_DEPTH:
             logger.warning(
-                f"Current recursion depth {recursive_depth} for processing pages exceeded depth limit. See notion_api.page_max_depth in config.yaml")
+                f"Current recursion depth {recursive_depth} for processing pages exceeded depth limit. See "
+                f"notion_api.page_max_depth in config.yaml")
             return
         is_database = page_info['object'] == 'database'
         logger.debug(f"[Depth={recursive_depth}] Recursively processing page: {page_info['id']}, is_database: {is_database}")
 
         # TODO add parse comments
         if is_database:
-            # TODO parse mentions in db title and relations in db properies
+            # TODO parse mentions in db title and relations in db properties
             child_db_pages = self.notion_api.get_all_database_items(page_info['id'])
             for child_page in child_db_pages:
                 self.save_relation_and_process_page(
@@ -108,12 +127,16 @@ class NotionProcessor:
         for block in child_blocks:
             self.recursive_process_block(block, parent_id=page_info['id'], recursive_depth=recursive_depth)
 
-    def save_relation_and_process_page(self, parent_id: str, rel_type: RelationType, page_id: str, rel_context: str = None,
+    def save_relation_and_process_page(self, parent_id: str, rel_type: RelationType, page_id: str,
+                                       rel_context: str = None,
                                        is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):
-        self.page_relations.append(NotionRelation(parent_id, rel_type, page_id, rel_context))
-        self.recursive_process_unprocessed_page(page_id, is_database=is_database, page_info=page_info, recursive_depth=recursive_depth)
+        if rel_type == RelationType.REFERENCES and not self.config.NOTION_RECURSIVE_PROCESS_REFERENCE_PAGES:
+            return
+        self.recursive_process_unprocessed_page(page_id, is_database=is_database, page_info=page_info,
+                                                recursive_depth=recursive_depth)
 
-    def save_relation_and_process_bookmark(self, parent_id: str, url: str, rel_type: RelationType = RelationType.REFERENCES,
+    def save_relation_and_process_bookmark(self, parent_id: str, url: str,
+                                           rel_type: RelationType = RelationType.REFERENCES,
                                            rel_context: str = None, recursive_depth: int = 0):
         self.page_relations.append(NotionRelation(parent_id, rel_type, url, rel_context))
         self.process_unprocessed_bookmark(url, recursive_depth=recursive_depth)
@@ -241,12 +264,13 @@ class NotionProcessor:
                 else:
                     page_info = self.notion_api.get_page_metadata(page_id)
             except Exception as e:
-                logger.error(f"[Depth={recursive_depth}] Failed to get page info for page: {page_id}: {e}")
+                logger.error(f"[Depth={recursive_depth}] Failed to get {'database' if is_database else 'page'} info for id: {page_id}: {e}")
                 logger.debug(f"Stack_trace for {page_id} exception", stack_info=True, stacklevel=15)
                 return
 
         # TODO don't save page only if already exists in neo4j and last_edited_time is not greater than in neo4j
-        page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']), page_info['url'], last_edited_time=page_info['last_edited_time'])
+        page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']),
+                          page_info['url'], last_edited_time=page_info['last_edited_time'])
         logger.info(f"[Depth={recursive_depth}] Adding new processed page[{len(self.prepared_pages)}]: {page.title}({page.type};{page.id})")
         self.prepared_pages.update({page_id: page})
         if page_info['archived'] or page_info['in_trash']:
@@ -288,7 +312,7 @@ class NotionProcessor:
             'last_edited_time',
             'multi_select',
             'number',
-            'people', # add support later
+            'people',  # add support later
             'phone_number',
             'rollup',
             'select',
@@ -314,10 +338,12 @@ class NotionProcessor:
                     )
             if prop['type'] == 'rich_text' and prop['rich_text']:
                 rich_text_array = self.get_paginated_properties(page_info['id'], prop, 'rich_text')
-                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Page property {prop_name}", recursive_depth=recursive_depth)
+                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Page property {prop_name}",
+                                             recursive_depth=recursive_depth)
             if prop['type'] == 'title' and prop['title']:
                 rich_text_array = self.get_paginated_properties(page_info['id'], prop, 'title')
-                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Page property {prop_name}", recursive_depth=recursive_depth)
+                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Page property {prop_name}",
+                                             recursive_depth=recursive_depth)
             if prop['type'] == 'url' and prop['url']:
                 self.save_relation_and_process_bookmark(
                     parent_id=page_info['id'],
@@ -327,4 +353,6 @@ class NotionProcessor:
                 )
 
     def get_paginated_properties(self, page_id: str, prop: dict, prop_name: str):
-        return [elem[prop_name] for elem in self.notion_api.get_all_page_properties(page_id, prop['id'])] if 'has_more' in prop and prop['has_more'] else prop[prop_name]
+        return [elem[prop_name] for elem in
+                self.notion_api.get_all_page_properties(page_id, prop['id'])] if 'has_more' in prop and prop[
+            'has_more'] else prop[prop_name]

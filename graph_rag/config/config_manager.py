@@ -1,45 +1,49 @@
-import os
 from typing import Dict, Any
 
 import yaml
 from dotenv import load_dotenv
+from pyaml_env import parse_config
 
 
 class Config:
     def __init__(self):
         load_dotenv()  # Load environment variables from .env file
 
-        # Load constants from environment variables
-        self.API_KEY: str = os.getenv('NOTION_API_KEY', '')
-        self.DATABASE_URL: str = os.getenv('DATABASE_URL', '')
-
         # Load configuration from config.yaml
-        with open('config/config.yaml', 'r') as config_file:
-            config_data: Dict[str, Any] = yaml.safe_load(config_file)
+        config_data: Dict[str, Any] = parse_config('config/config.yaml', tag=None, default_value='')
 
         # Notion API configuration
-        self.NOTION_API_BASE_URL: str = config_data['notion_api']['base_url']
-        self.NOTION_API_VERSION: str = config_data['notion_api']['version']
-        self.NOTION_API_TIMEOUT: int = config_data['notion_api']['timeout']
-        self.NOTION_PAGE_MAX_DEPTH: int = config_data['notion_api']['page_max_depth']
-        self.NOTION_CREATE_UNPROCESSED_NODES: bool = config_data['notion_api']['create_unprocessed_graph_nodes']
+        notion_config = config_data['notion_api']
+        self.NOTION_API_KEY: str = notion_config['api_key']
+        self.NOTION_API_BASE_URL: str = notion_config['base_url']
+        self.NOTION_API_VERSION: str = notion_config['version']
+        self.NOTION_API_TIMEOUT: int = notion_config['timeout']
+        self.NOTION_PAGE_MAX_DEPTH: int = notion_config['page_max_depth']
+        self.NOTION_CREATE_UNPROCESSED_NODES: bool = notion_config['create_unprocessed_graph_nodes']
+        self.NOTION_RECURSIVE_PROCESS_REFERENCE_PAGES: bool = notion_config['recursive_process_reference_pages']
 
         # Pocket API configuration
         self.POCKET_API_BASE_URL: str = config_data['pocket_api']['base_url']
 
         # LLM configuration
-        self.LLM_MODEL: str = config_data['llm']['model']
-        self.LLM_TEMPERATURE: float = config_data['llm']['temperature']
-        self.LLM_MAX_TOKENS: int = config_data['llm']['max_tokens']
+        llm_config = config_data['llm']
+        self.OPENAI_API_KEY: str = llm_config['api_key']
+        self.LLM_MODEL: str = llm_config['model']
+        self.LLM_TEMPERATURE: float = llm_config['temperature']
+        self.LLM_MAX_TOKENS: int = llm_config['max_tokens']
 
         # Neo4j configuration
-        self.NEO4J_URI: str = os.getenv('NEO4J_URI', 'bolt://localhost:7687')
-        self.NEO4J_USER: str = os.getenv('NEO4J_USER', 'neo4j')
-        self.NEO4J_PASSWORD: str = os.getenv('NEO4J_PASSWORD', 'password')
+        neo4j_config = config_data['neo4j']
+        self.NEO4J_URI: str = neo4j_config['uri']
+        self.NEO4J_USER: str = neo4j_config['user']
+        self.NEO4J_PASSWORD: str = neo4j_config['password']
 
         # Cache configuration
-        self.CACHE_ENABLED: int = config_data['cache']['enabled']
-        self.CACHE_PATH: str = config_data['cache']['path_to_cache']
+        cache_config = config_data['cache']
+        self.CACHE_ENABLED: int = cache_config['enabled']
+        self.CACHE_PATH: str = cache_config['path_to_cache']
+
+        self.WEB_PARSER_TIMEOUT: int = config_data['web_parser']['timeout']
 
     def get_config(self, key: str, default: Any = None) -> Any:
         """
@@ -60,4 +64,3 @@ if __name__ == "__main__":
     print(f"Notion API Base URL: {config.NOTION_API_BASE_URL}")
     print(f"LLM Model: {config.LLM_MODEL}")
     print(f"Neo4j Host: {config.NEO4J_URI}")
-    # You can still use the get_config method for flexibility

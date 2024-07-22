@@ -1,19 +1,30 @@
-# Example config.yaml
+neo4j:
+  uri: ${NEO4J_URI:bolt://localhost:7687}
+  user: ${NEO4J_USER:neo4j}
+  password: ${NEO4J_PASSWORD:neo4j}
+
 notion_api:
   base_url: https://api.notion.com/v1/
   version: "2022-06-28"
   timeout: 60
-  page_max_depth: 100
+  api_key: ${NOTION_API_KEY}
+#  processing strategy
+  page_max_depth: 200
   create_unprocessed_graph_nodes: true
+  recursive_process_reference_pages: false
 
 pocket_api:
   base_url: https://getpocket.com/v3/
 
 llm:
-  model: gpt-3.5-turbo
+  api_key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
   temperature: 0.7
   max_tokens: 150
 
 cache:
   enabled: true
   path_to_cache: cache/
+
+web_parser:
+  timeout: 5

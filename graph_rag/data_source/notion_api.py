@@ -9,7 +9,7 @@ class NotionAPI:
         self.base_url = self.config.NOTION_API_BASE_URL
         self.version = self.config.NOTION_API_VERSION
         self.headers = {
-            "Authorization": f"Bearer {self.config.API_KEY}",
+            "Authorization": f"Bearer {self.config.NOTION_API_KEY}",
             "Notion-Version": self.version,
             "Content-Type": "application/json"
         }

@@ -7,6 +7,7 @@ langchain-core~=0.2.9
 langchain-openai~=0.1.9
 langchain-text-splitters~=0.2.1
 py2neo~=2021.2.4
+pyaml-env~=1.2.1
 python-dotenv~=1.0.1
 PyYAML~=6.0.1
 

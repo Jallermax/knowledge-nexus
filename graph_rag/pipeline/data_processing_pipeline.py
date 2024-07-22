@@ -64,9 +64,9 @@ class DataProcessingPipeline:
 
     def add_missing_page(self, page_id: str, prepared_pages: Dict[str, NotionPage]):
         new_page = NotionPage(
-            page_id=page_id,
+            id=page_id,
             title="Unprocessed",
-            page_type=PageType.PAGE,
+            type=PageType.PAGE,
             url='',
             source='Notion'
         )
