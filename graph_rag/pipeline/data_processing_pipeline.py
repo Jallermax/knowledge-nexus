@@ -6,15 +6,31 @@ from graph_rag.ai_agent.base_agent import BaseAgent
 from graph_rag.config.config_manager import Config
 from graph_rag.processor.entity_extractor import EntityExtractor
 from graph_rag.processor.notion_processor import NotionProcessor
+from graph_rag.processor.todoist_processor import TodoistProcessor
 from graph_rag.storage.neo4j_manager import Neo4jManager
+from graph_rag.utils.helpers import print_colored_text_same_line
 
 logger = logging.getLogger(__name__)
+
+
+def is_todoist_url(node_id):
+    """ Check if the page is a Todoist URL using regex. example of todoist id is 'https://todoist.com/showTask?id=5226292528' """
+    return '://todoist.com/showTask?id=' in node_id or 'https://app.todoist.com/app/task/' in node_id
+
+def get_task_id_from_url(url):
+    """ Extract the task id (string of numbers) from the Todoist URL. don't include anything that goes after url like query params """
+    if '://todoist.com/showTask?id=' in url:
+        return url.split('://todoist.com/showTask?id=')[1].split('&')[0]
+    if 'https://app.todoist.com/app/task/' in url:
+        return url.split('https://app.todoist.com/app/task/')[1].split('?')[0]
+    return None
 
 
 class DataProcessingPipeline:
     def __init__(self):
         self.config = Config()
         self.notion_processor = NotionProcessor()
+        self.todoist_processor = TodoistProcessor()
         self.entity_extractor = EntityExtractor()
         self.neo4j_manager = Neo4jManager()
         self.ai_agent = BaseAgent()
@@ -27,7 +43,18 @@ class DataProcessingPipeline:
         relations = self.notion_processor.page_relations
         logger.info(f"Prepared {len(relations)} relations from Notion")
 
+        count = 0
         for page in prepared_pages.values():
+            if page.title == 'Todoist' and page.type == PageType.BOOKMARK and is_todoist_url(page.id):
+                task = self.todoist_processor.get_task(get_task_id_from_url(page.id))
+                if task:
+                    page.source = 'Todoist'
+                    page.type = PageType.TASK
+                    page.title = task.content
+                    page.url = task.url
+                    page.content = f"Content: {task.content}\nCreated_at: {task.created_at}\nPriority: {task.priority}\nProject_id: {task.project_id}\nParent_id: {task.parent_id}\nLabels: {task.labels}"
+            count += 1
+            print_colored_text_same_line(f"Creating Neo4J links ({count}/{len(prepared_pages)})")
             self.save_notion_page(page)
 
         # TODO check existing pages not only in prepared_pages, but in neo4j as well
@@ -41,7 +68,10 @@ class DataProcessingPipeline:
                          relation.from_page_id in prepared_pages and relation.to_page_id in prepared_pages]
             logger.info(f"{len(relations) - relations_count_before} Relations with unprocessed pages was deleted")
 
+        count = 0
         for relation in relations:
+            count+=1
+            print_colored_text_same_line(f"Creating Neo4J links ({count}/{len(relations)})")
             self.neo4j_manager.link_entities(relation.from_page_id, relation.to_page_id, relation.relation_type.value, relation.context)
 
         logger.info("Notion structure has been parsed and stored in Neo4j.")

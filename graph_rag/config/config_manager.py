@@ -27,6 +27,9 @@ class Config:
         # Pocket API configuration
         self.POCKET_API_BASE_URL: str = config_data['pocket_api']['base_url']
 
+        # Todoist API integration
+        self.TODOIST_API_KEY: str = os.getenv('TODOIST_API_KEY', '')
+
         # LLM configuration
         self.LLM_MODEL: str = config_data['llm']['model']
         self.LLM_TEMPERATURE: float = config_data['llm']['temperature']

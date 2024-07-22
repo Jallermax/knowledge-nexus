@@ -14,6 +14,7 @@ class PageType(Enum):
     PAGE = "Page"
     DATABASE = "Database"
     BOOKMARK = "Bookmark"
+    TASK = "Task"
 
 
 def get_page_type_from_string(page_type_str: str) -> PageType:
