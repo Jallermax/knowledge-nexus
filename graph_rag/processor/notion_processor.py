@@ -16,10 +16,14 @@ def _extract_notion_uuid(href):
     pattern = r"(https:\/\/www\.notion\.so)?/([a-zA-Z0-9\-]+/)?([a-zA-Z0-9\-]+-)?([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})(\?[a-zA-Z0-9%=\-&]*)?"
     match = re.match(pattern, href)
     if match:
-        return match.group(4)  # return the UUID
+        return match.group(4).replace('-', '')  # return the UUID
 
     else:
         return None  # return None if the href does not match the pattern
+
+
+def normalize_uuid(uuid: str):
+    return uuid.replace('-', '') if re.match(r'^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$', uuid) else uuid
 
 
 def _extract_title(page_content: dict):
@@ -58,9 +62,10 @@ class NotionProcessor:
 
         logger.info(f"Processing root page: {root_page_id}")
         root_page = self.notion_api.get_root_page_info(root_page_id)
-        notion_page = NotionPage(root_page['id'], _extract_title(root_page), get_page_type_from_string(root_page['object']),
+        notion_page = NotionPage(normalize_uuid(root_page['id']), _extract_title(root_page),
+                                 get_page_type_from_string(root_page['object']),
                                  root_page['url'], last_edited_time=root_page['last_edited_time'])
-        self.prepared_pages.update({root_page['id']: notion_page})
+        self.prepared_pages.update({notion_page.id: notion_page})
         self.recursive_process_page_children(root_page)
 
         if self.config.CACHE_ENABLED:
@@ -130,6 +135,7 @@ class NotionProcessor:
     def save_relation_and_process_page(self, parent_id: str, rel_type: RelationType, page_id: str,
                                        rel_context: str = None,
                                        is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):
+        self.page_relations.append(NotionRelation(normalize_uuid(parent_id), rel_type, normalize_uuid(page_id), rel_context))
         if rel_type == RelationType.REFERENCES and not self.config.NOTION_RECURSIVE_PROCESS_REFERENCE_PAGES:
             return
         self.recursive_process_unprocessed_page(page_id, is_database=is_database, page_info=page_info,
@@ -138,7 +144,7 @@ class NotionProcessor:
     def save_relation_and_process_bookmark(self, parent_id: str, url: str,
                                            rel_type: RelationType = RelationType.REFERENCES,
                                            rel_context: str = None, recursive_depth: int = 0):
-        self.page_relations.append(NotionRelation(parent_id, rel_type, url, rel_context))
+        self.page_relations.append(NotionRelation(normalize_uuid(parent_id), rel_type, url, rel_context))
         self.process_unprocessed_bookmark(url, recursive_depth=recursive_depth)
 
     def recursive_process_block(self, block: dict, parent_id: str, recursive_depth: int = 0):
@@ -210,7 +216,7 @@ class NotionProcessor:
             logger.warning(f"Unsupported block_id {block['id']} of page {parent_id}")
             return
 
-        if 'has_children' in block and block['has_children']:
+        if 'has_children' in block and block['has_children'] and block['type'] not in ['child_page', 'child_database']:
             try:
                 child_blocks = self.notion_api.get_all_content_blocks(block['id'])
             except Exception as e:
@@ -252,6 +258,7 @@ class NotionProcessor:
             self.prepared_pages.update({url: bookmark_page})
 
     def recursive_process_unprocessed_page(self, page_id: str, is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):
+        page_id = normalize_uuid(page_id)
         if page_id in self.prepared_pages.keys():
             return
 
