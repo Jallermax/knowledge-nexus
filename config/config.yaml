@@ -8,8 +8,12 @@ notion_api:
   version: "2022-06-28"
   timeout: 60
   api_key: ${NOTION_API_KEY}
-#  processing strategy
+  #  processing strategy
   page_max_depth: 200
+  add_archived_page_nodes: false
+  process_archived_page_content: false
+  add_removed_page_nodes: false
+  process_removed_page_content: false
   create_unprocessed_graph_nodes: true
   recursive_process_reference_pages: false
 

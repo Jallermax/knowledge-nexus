@@ -278,11 +278,15 @@ class NotionProcessor:
         # TODO don't save page only if already exists in neo4j and last_edited_time is not greater than in neo4j
         page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']),
                           page_info['url'], last_edited_time=page_info['last_edited_time'])
+
+        if not self._should_add_page(page_info):
+            return
+
+        self._update_page_title(page_info, page)
         logger.info(f"[Depth={recursive_depth}] Adding new processed page[{len(self.prepared_pages)}]: {page.title}({page.type};{page.id})")
         self.prepared_pages.update({page_id: page})
-        if page_info['archived'] or page_info['in_trash']:
-            logger.warning(f"[Depth={recursive_depth}] Object {page_info['object']} (id:{page_info['id']} is archived or in trash")
-            page.title = f"[ARCHIVED] {page.title}"
+
+        if not self._should_process_content(page_info):
             return
 
         self.recursive_process_page_children(page_info, recursive_depth=recursive_depth)
@@ -363,3 +367,23 @@ class NotionProcessor:
         return [elem[prop_name] for elem in
                 self.notion_api.get_all_page_properties(page_id, prop['id'])] if 'has_more' in prop and prop[
             'has_more'] else prop[prop_name]
+
+    def _should_add_page(self, page_info: dict):
+        if page_info['archived']:
+            return self.config.NOTION_ADD_ARCHIVED_PAGE_NODES
+        elif page_info['in_trash']:
+            return self.config.NOTION_ADD_REMOVED_PAGE_NODES
+        return True
+
+    def _update_page_title(self, page_info: dict, page: NotionPage):
+        if page_info['archived']:
+            page.title = f"[ARCHIVED] {page.title}"
+        elif page_info['in_trash']:
+            page.title = f"[REMOVED] {page.title}"
+
+    def _should_process_content(self, page_info: dict) -> bool:
+        if page_info['archived']:
+            return self.config.NOTION_PROCESS_ARCHIVED_PAGE_CONTENT
+        elif page_info['in_trash']:
+            return self.config.NOTION_PROCESS_REMOVED_PAGE_CONTENT
+        return True

@@ -19,6 +19,10 @@ class Config:
         self.NOTION_API_VERSION: str = notion_config['version']
         self.NOTION_API_TIMEOUT: int = notion_config['timeout']
         self.NOTION_PAGE_MAX_DEPTH: int = notion_config['page_max_depth']
+        self.NOTION_ADD_ARCHIVED_PAGE_NODES: bool = notion_config['add_archived_page_nodes']
+        self.NOTION_PROCESS_ARCHIVED_PAGE_CONTENT: bool = notion_config['process_archived_page_content']
+        self.NOTION_ADD_REMOVED_PAGE_NODES: bool = notion_config['add_removed_page_nodes']
+        self.NOTION_PROCESS_REMOVED_PAGE_CONTENT: bool = notion_config['process_removed_page_content']
         self.NOTION_CREATE_UNPROCESSED_NODES: bool = notion_config['create_unprocessed_graph_nodes']
         self.NOTION_RECURSIVE_PROCESS_REFERENCE_PAGES: bool = notion_config['recursive_process_reference_pages']
 
