@@ -1,5 +1,14 @@
 # Knowledge Nexus: Your AI-Powered Personal Knowledge Discovery Engine
 
+## 🛠 Getting Started
+
+1. install neo4j
+2. install python
+3. make and configure .env in root directory
+4. adjust options in config/config.yaml if necessary
+5. `pip install -r requirements.txt`
+6. `python main.py`
+
 ## 🌟 Project Overview
 
 Knowledge Nexus is an advanced personal knowledge management system that transforms the way individuals organize,
@@ -42,17 +51,6 @@ personal knowledge base.
 - **Personalized Knowledge Assistant**: Tailored to your specific needs and preferences, helping you find tools,
   frameworks, and best practices aligned with your views.
 
-## 🌈 What Sets Knowledge Nexus Apart
-
-- **Automation with a Personal Touch**: While it automates much of the knowledge processing, Knowledge Nexus is designed
-  to adapt to your unique perspective and needs.
-- **Deep Semantic Understanding**: Goes beyond simple keyword matching or explicit links to understand the true context
-  and relationships within your knowledge base.
-- **Data under your control**: All your data is stored locally, ensuring that your personal knowledge remains under your
-  control and easily exportable.
-- **Low Maintenance, High Value**: Once set up, Knowledge Nexus continually processes and organizes your information
-  with minimal manual intervention, allowing you to focus on generating and using knowledge rather than managing it.
-
 ## 👥 Who Is It For?
 
 Knowledge Nexus is primarily designed for individual users who:
@@ -61,28 +59,6 @@ Knowledge Nexus is primarily designed for individual users who:
 - Seek to uncover new insights and connections within their knowledge base
 - Want to reduce the cognitive overhead of manual knowledge management
 - Are looking for a personal research assistant to aid in complex tasks or decision-making
-
-## 🛠 Getting Started
-
-1. install neo4j
-2. install python
-3. make and configure .env in root directory
-4. input root `notion_page_id` into `main.py` from where to start the graph
-5. `pip install -r requirements.txt`
-6. `python main.py`
-
-## 🔮 Future Enhancements
-
-- Enhanced personalization through adaptive learning of user preferences and interests
-- Integration with additional productivity tools and data sources
-- Advanced visualization options for exploring your knowledge graph
-
-## 🛠️ Technical Highlights
-
-- **LangChain Integration**: Utilize the power of LangChain for advanced NLP tasks and AI agent coordination.
-- **Neo4j Graph Database**: Leverage the capabilities of graph databases for efficient storage and querying of
-  interconnected data.
-- **Configurable AI Agents**: Customize AI behavior and prompts to suit specific use cases or domains.
 
 ## 🔗 Supported Notion Links
 
@@ -155,8 +131,8 @@ Knowledge Nexus is primarily designed for individual users who:
 | Divider                                  |          ✅          |       N/A        |        N/A        |
 | Table of Contents                        |          ✅          |       N/A        |        N/A        |
 | Breadcrumb                               |          ✅          |       N/A        |        N/A        |
-| Column List                              |          ✅          |       N/A        |         ❌         |
-| Column                                   |          ✅          |       N/A        |         ❌         |
+| Column List                              |          ✅          |       N/A        |        N/A        |
+| Column                                   |          ✅          |       N/A        |        N/A        |
 | Synced Block                             |          ✅          |        ✅         |         ✅         |
 | Template                                 |          ✅          |        ✅         |         ✅         |
 | Link to Page                             |          ✅          |        ✅         |         ✅         |
@@ -166,12 +142,18 @@ Knowledge Nexus is primarily designed for individual users who:
 | Child Database (except linked and views) |          ✅          |        ✅         |         ✅         |
 | **Comments**                             |          ❌          |        ❌         |         ❌         |
 
+## 🔮 Future Enhancements
+
+- Enhanced personalization through adaptive learning of user preferences and interests
+- Integration with additional productivity tools and data sources
+- Advanced visualization options for exploring your knowledge graph
+
 ## 🛠️ TODO: Implementation Steps
 
 1. Data preparation
     - [X] Prepare personal context
     - [ ] Export Notion Database as a zip file
-        - [ ] Prepare Notion system structure, tags, projects
+        - [X] Prepare Notion system structure, tags, projects
     - [ ] Export Pocket articles
         - [ ] Prepare Pocket system tags
     - [ ] Prepare sample web pages from bookmarks for scraping
