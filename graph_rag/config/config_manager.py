@@ -25,6 +25,9 @@ class Config:
         self.NOTION_PROCESS_REMOVED_PAGE_CONTENT: bool = notion_config['process_removed_page_content']
         self.NOTION_CREATE_UNPROCESSED_NODES: bool = notion_config['create_unprocessed_graph_nodes']
         self.NOTION_RECURSIVE_PROCESS_REFERENCE_PAGES: bool = notion_config['recursive_process_reference_pages']
+        self.NOTION_MARKDOWN_INDENT: str = notion_config['markdown_parser_options']['indent']
+        self.NOTION_MARKDOWN_PARSER_EXCLUDED_PROPERTY_TYPES: list = notion_config['markdown_parser_options']['excluded_property_types']
+        self.NOTION_MARKDOWN_PARSER_EXCLUDED_BLOCK_TYPES: list = notion_config['markdown_parser_options']['excluded_block_types']
 
         # Pocket API configuration
         self.POCKET_API_BASE_URL: str = config_data['pocket_api']['base_url']

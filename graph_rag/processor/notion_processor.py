@@ -7,6 +7,7 @@ from graph_rag.config.config_manager import Config
 from graph_rag.data_model.notion_page import NotionPage, get_page_type_from_string, NotionRelation, RelationType, PageType
 from graph_rag.data_source.notion_api import NotionAPI
 from graph_rag.data_source.web_scraper import get_info_from_url
+from graph_rag.processor.to_markdown_parser import Notion2MarkdownParser
 from graph_rag.utils.cache_util import load_model_cache, save_model_cache
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class NotionProcessor:
     def __init__(self):
         self.notion_api = NotionAPI()
         self.config = Config()
+        self.content_parser = Notion2MarkdownParser()
         self.prepared_pages: Dict[str, NotionPage] = {}
         self.page_relations: List[NotionRelation] = []
         os.makedirs(self.config.CACHE_PATH, exist_ok=True)
@@ -66,7 +68,7 @@ class NotionProcessor:
                                  get_page_type_from_string(root_page['object']),
                                  root_page['url'], last_edited_time=root_page['last_edited_time'])
         self.prepared_pages.update({notion_page.id: notion_page})
-        self.recursive_process_page_children(root_page)
+        notion_page.content = self.recursive_process_page_children(root_page)
 
         if self.config.CACHE_ENABLED:
             self.save_prepared_pages_to_cache(root_page_id)
@@ -94,7 +96,7 @@ class NotionProcessor:
         self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data
                                in page_relations_cache]
 
-    def recursive_process_page_children(self, page_info: dict, recursive_depth: int = 0):
+    def recursive_process_page_children(self, page_info: dict, recursive_depth: int = 0) -> str | None:
         """
         Recursively process all blocks of the given page and its sub-pages if this page hasn't been processed before
         (not in self.processed_pages). Add every processed sub-page into processed_pages and add relation to
@@ -105,10 +107,11 @@ class NotionProcessor:
             logger.warning(
                 f"Current recursion depth {recursive_depth} for processing pages exceeded depth limit. See "
                 f"notion_api.page_max_depth in config.yaml")
-            return
+            return None
         is_database = page_info['object'] == 'database'
         logger.debug(f"[Depth={recursive_depth}] Recursively processing page: {page_info['id']}, is_database: {is_database}")
 
+        content = ''
         # TODO add parse comments
         if is_database:
             # TODO parse mentions in db title and relations in db properties
@@ -122,15 +125,19 @@ class NotionProcessor:
                     recursive_depth=recursive_depth)
         else:
             self.recursive_process_page_properties(page_info, recursive_depth)
+            content = self.content_parser.parse_properties(page_info['properties'])
 
         try:
             child_blocks = self.notion_api.get_all_content_blocks(page_info['id'])
         except Exception as e:
             logger.error(f"[Depth={recursive_depth}] Exception occurred during fetching of page {page_info['id']} blocks: {e}")
             logger.debug(f"Stack_trace for {page_info['id']} exception", stack_info=True, stacklevel=15)
-            return
+            return content
         for block in child_blocks:
-            self.recursive_process_block(block, parent_id=page_info['id'], recursive_depth=recursive_depth)
+            content += self.recursive_process_block(block, parent_id=page_info['id'], recursive_depth=recursive_depth)
+
+        return content
+
 
     def save_relation_and_process_page(self, parent_id: str, rel_type: RelationType, page_id: str,
                                        rel_context: str = None,
@@ -147,7 +154,8 @@ class NotionProcessor:
         self.page_relations.append(NotionRelation(normalize_uuid(parent_id), rel_type, url, rel_context))
         self.process_unprocessed_bookmark(url, recursive_depth=recursive_depth)
 
-    def recursive_process_block(self, block: dict, parent_id: str, recursive_depth: int = 0):
+    def recursive_process_block(self, block: dict, parent_id: str, indent_level: int = 0,
+                                recursive_depth: int = 0) -> str:
         logger.debug(f"[Depth={recursive_depth}] Recursively parsing block: {block['id']}, parent_id: {parent_id}")
         unsupported_block_types = [
             'breadcrumb',
@@ -155,9 +163,9 @@ class NotionProcessor:
             'column_list',  # retrieve block children for columns
             'divider',
             'equation',
-            'file',
+            'file',  # TODO parse caption
             'image',
-            'pdf',
+            'pdf',  # TODO parse caption
             'synced_block',
             'table',
             'table_row',
@@ -165,14 +173,14 @@ class NotionProcessor:
             'video',
         ]
         url_block_types = [
-            'bookmark',
+            'bookmark',  # TODO parse caption
             'embed',
             'link_preview',
         ]
         rich_text_block_types = [
             'bulleted_list_item',
             'callout',
-            'code',
+            'code',  # TODO parse caption
             'heading_1',
             'heading_2',
             'heading_3',
@@ -204,7 +212,6 @@ class NotionProcessor:
             self.process_rich_text_array(block[block['type']]['rich_text'], parent_id, recursive_depth)
 
         elif block['type'] in url_block_types:
-            # TODO parse mentions in captions (where supported)
             url = block[block['type']]['url']
             self.save_relation_and_process_bookmark(
                 parent_id=parent_id,
@@ -214,7 +221,10 @@ class NotionProcessor:
 
         elif block['type'] == 'unsupported':
             logger.warning(f"Unsupported block_id {block['id']} of page {parent_id}")
-            return
+            return ''
+
+        block_content = self.content_parser.parse_block(block, indent_level)
+        content = block_content if block_content else ''
 
         if 'has_children' in block and block['has_children'] and block['type'] not in ['child_page', 'child_database']:
             try:
@@ -222,9 +232,11 @@ class NotionProcessor:
             except Exception as e:
                 logger.error(f"[Depth={recursive_depth}] Exception occurred during fetching of page {block['id']} blocks: {e}")
                 logger.debug(f"Stack_trace for {block['id']} exception", stack_info=True, stacklevel=15)
-                return
+                return content
             for child_block in child_blocks:
-                self.recursive_process_block(child_block, parent_id, recursive_depth)
+                content += self.recursive_process_block(child_block, parent_id, indent_level + 1, recursive_depth)
+
+        return content
 
     def process_rich_text_array(self, rich_text_array: list, parent_id: str, recursive_depth: int, rel_context: str = None):
         for text in rich_text_array:
@@ -289,27 +301,7 @@ class NotionProcessor:
         if not self._should_process_content(page_info):
             return
 
-        self.recursive_process_page_children(page_info, recursive_depth=recursive_depth)
-
-    def _process_block_md(self, block: dict):
-        content = ""
-        if block['type'] == 'paragraph':
-            content += _extract_rich_text(block['paragraph']['rich_text'])
-        elif block['type'].startswith('heading_'):
-            content += _extract_rich_text(block[block['type']]['rich_text'])
-        elif block['type'] == 'bulleted_list_item':
-            content += "• " + _extract_rich_text(block['bulleted_list_item']['rich_text'])
-        elif block['type'] == 'numbered_list_item':
-            content += "1. " + _extract_rich_text(block['numbered_list_item']['rich_text'])
-
-        content += "\n"
-
-        if 'has_children' in block and block['has_children']:
-            child_blocks = self.notion_api.get_all_content_blocks(block['id'])
-            for child_block in child_blocks:
-                content += self._process_block_md(child_block)
-
-        return content
+        page.content = self.recursive_process_page_children(page_info, recursive_depth=recursive_depth)
 
     def recursive_process_page_properties(self, page_info: dict, recursive_depth: int = 0):
         unsupported_properties = [
@@ -344,22 +336,22 @@ class NotionProcessor:
                         parent_id=page_info['id'],
                         rel_type=RelationType.REFERENCES,
                         page_id=relation['id'],
-                        rel_context=f"Page property {prop_name}",
+                        rel_context=f"Relation property **{prop_name}**",
                         recursive_depth=recursive_depth
                     )
             if prop['type'] == 'rich_text' and prop['rich_text']:
                 rich_text_array = self.get_paginated_properties(page_info['id'], prop, 'rich_text')
-                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Page property {prop_name}",
+                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Text property **{prop_name}**:",
                                              recursive_depth=recursive_depth)
             if prop['type'] == 'title' and prop['title']:
                 rich_text_array = self.get_paginated_properties(page_info['id'], prop, 'title')
-                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Page property {prop_name}",
+                self.process_rich_text_array(rich_text_array, page_info['id'], rel_context=f"Title property **{prop_name}**:",
                                              recursive_depth=recursive_depth)
             if prop['type'] == 'url' and prop['url']:
                 self.save_relation_and_process_bookmark(
                     parent_id=page_info['id'],
                     url=prop['url'],
-                    rel_context=f"Page property {prop_name}",
+                    rel_context=f"Url property **{prop_name}**",
                     recursive_depth=recursive_depth
                 )
 

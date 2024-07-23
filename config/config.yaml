@@ -16,6 +16,21 @@ notion_api:
   process_removed_page_content: false
   create_unprocessed_graph_nodes: true
   recursive_process_reference_pages: false
+  markdown_parser_options:
+    indent: "  "
+    excluded_property_types: [
+      "created_by",
+      "last_edited_by",
+      "last_edited_time",
+      "unique_id",
+      "verification"
+    ]
+    excluded_block_types: [
+      "breadcrumb",
+      "column_list",
+      "column",
+      "table_of_contents"
+    ]
 
 pocket_api:
   base_url: https://getpocket.com/v3/
