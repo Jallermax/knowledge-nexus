@@ -76,23 +76,21 @@ class NotionProcessor:
             print("Saved data to cache.")
 
     def save_prepared_pages_to_cache(self, root_page_id):
-        save_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'),
+        save_model_cache('prepared_pages.pkl',
                          {page_id: page.to_dict() for page_id, page in self.prepared_pages.items()}, NotionPage,
                          root_page_id)
 
     def load_prepared_pages_from_cache(self, root_page_id):
-        prepared_pages_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'prepared_pages.pkl'),
-                                                NotionPage, root_page_id)
+        prepared_pages_cache = load_model_cache('prepared_pages.pkl', NotionPage, root_page_id)
         self.prepared_pages = {page_id: NotionPage.from_dict(page_data) for page_id, page_data
                                in prepared_pages_cache.items()}
 
     def save_page_relations_to_cache(self, root_page_id):
-        save_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'),
+        save_model_cache('page_relations.pkl',
                          [relation.to_dict() for relation in self.page_relations], NotionRelation, root_page_id)
 
     def load_page_relations_from_cache(self, root_page_id):
-        page_relations_cache = load_model_cache(os.path.join(self.config.CACHE_PATH, 'page_relations.pkl'),
-                                                NotionRelation, root_page_id)
+        page_relations_cache = load_model_cache('page_relations.pkl', NotionRelation, root_page_id)
         self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data
                                in page_relations_cache]
 

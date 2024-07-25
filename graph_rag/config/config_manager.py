@@ -18,6 +18,8 @@ class Config:
         self.NOTION_API_BASE_URL: str = notion_config['base_url']
         self.NOTION_API_VERSION: str = notion_config['version']
         self.NOTION_API_TIMEOUT: int = notion_config['timeout']
+        self.NOTION_CACHE_TTL_SECONDS: int = notion_config['cache_ttl_seconds']
+        self.NOTION_CACHE_PATH: str = notion_config['cache_path']
         self.NOTION_PAGE_MAX_DEPTH: int = notion_config['page_max_depth']
         self.NOTION_ADD_ARCHIVED_PAGE_NODES: bool = notion_config['add_archived_page_nodes']
         self.NOTION_ADD_REMOVED_PAGE_NODES: bool = notion_config['add_removed_page_nodes']
@@ -46,7 +48,8 @@ class Config:
         # Cache configuration
         cache_config = config_data['cache']
         self.CACHE_ENABLED: int = cache_config['enabled']
-        self.CACHE_PATH: str = cache_config['path_to_cache']
+        self.CACHE_PATH: str = cache_config['path']
+        self.CACHE_TTL_SECONDS: int = cache_config['ttl_seconds']
 
         self.WEB_PARSER_TIMEOUT: int = config_data['web_parser']['timeout']
 

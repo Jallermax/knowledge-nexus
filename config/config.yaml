@@ -7,6 +7,8 @@ notion_api:
   base_url: https://api.notion.com/v1/
   version: "2022-06-28"
   timeout: 60
+  cache_ttl_seconds: 3600
+  cache_path:
   api_key: ${NOTION_API_KEY}
   #  processing strategy
   page_max_depth: 200
@@ -40,10 +42,10 @@ llm:
   max_tokens: 150
 
 cache:
-  enabled: false
+  enabled: true
   path: cache/
-#  set 10 days TTL in seconds
-  ttl_seconds: 864000
+#  set 1 day TTL in seconds
+  ttl_seconds: 86400
 
 web_parser:
   timeout: 10
