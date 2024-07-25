@@ -210,6 +210,12 @@ Knowledge Nexus is primarily designed for individual users who:
     - [ ] Implement token-cost [estimation](https://github.com/AgentOps-AI/tokencost)
     - [ ] Implement langfuse for agents and flow evaluation
 
+## 📚 Resources and inspirations
+
+- [Awesome-LLM-KG](https://github.com/RManLuo/Awesome-LLM-KG) - A collection of papers and resources about unifying
+  large language models (LLMs) and knowledge graphs (KGs).
+- [GraphRAG](https://github.com/microsoft/graphrag) -Microsoft's GraphRAG research paper and implementation
+
 ## 🤝 Contributing
 
 Knowledge Nexus is currently a personal project, but ideas and suggestions are welcome! Feel free to open an issue for
