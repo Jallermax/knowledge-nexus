@@ -367,15 +367,15 @@ class NotionProcessor:
             return self.config.NOTION_ADD_REMOVED_PAGE_NODES
         return True
 
-    def _update_page_title(self, page_info: dict, page: NotionPage):
+    @staticmethod
+    def _update_page_title(page_info: dict, page: NotionPage):
         if page_info['archived']:
             page.title = f"[ARCHIVED] {page.title}"
         elif page_info['in_trash']:
             page.title = f"[REMOVED] {page.title}"
 
-    def _should_process_content(self, page_info: dict) -> bool:
-        if page_info['archived']:
-            return self.config.NOTION_PROCESS_ARCHIVED_PAGE_CONTENT
-        elif page_info['in_trash']:
-            return self.config.NOTION_PROCESS_REMOVED_PAGE_CONTENT
+    @staticmethod
+    def _should_process_content(page_info: dict) -> bool:
+        if page_info['archived'] or page_info['in_trash']:
+            return False
         return True

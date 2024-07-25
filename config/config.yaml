@@ -11,11 +11,9 @@ notion_api:
   #  processing strategy
   page_max_depth: 200
   add_archived_page_nodes: false
-  process_archived_page_content: false
   add_removed_page_nodes: false
-  process_removed_page_content: false
-  create_unprocessed_graph_nodes: true
-  recursive_process_reference_pages: false
+  create_unprocessed_graph_nodes: false
+  recursive_process_reference_pages: true
   markdown_parser_options:
     indent: "  "
     excluded_property_types: [
@@ -42,8 +40,10 @@ llm:
   max_tokens: 150
 
 cache:
-  enabled: true
-  path_to_cache: cache/
+  enabled: false
+  path: cache/
+#  set 10 days TTL in seconds
+  ttl_seconds: 864000
 
 web_parser:
-  timeout: 5
+  timeout: 10
