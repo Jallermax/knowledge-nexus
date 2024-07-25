@@ -37,6 +37,6 @@ def load_model_cache(file_name: str, model_class: Type[Cacheable], key: str) -> 
     model_class.check_version(cache_data['version'])
     if cache_data['key'] != key:
         raise ValueError(f"Cache key mismatch: expected {key}, got {cache_data['key']}")
-    if (time.time() - cache_data.get('save_time', 0)) > timedelta(seconds=config.CACHE_TTL_SECONDS).total_seconds():
+    if config.CACHE_TTL_SECONDS and (time.time() - cache_data.get('save_time', 0)) > timedelta(seconds=config.CACHE_TTL_SECONDS).total_seconds():
         raise ValueError("Cache expired")
     return cache_data['data']

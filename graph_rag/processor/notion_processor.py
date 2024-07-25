@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from datetime import datetime
 from typing import Dict, List
 
 from graph_rag.config.config_manager import Config
@@ -42,6 +43,13 @@ def _extract_rich_text(rich_text: List[dict]):
     return ''.join([text['plain_text'] for text in rich_text])
 
 
+def first_time_after_second(first_time: str, second_time: str):
+    dt_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+    dt1 = datetime.strptime(first_time, dt_format)
+    dt2 = datetime.strptime(second_time, dt_format)
+    return dt1 > dt2
+
+
 class NotionProcessor:
     def __init__(self):
         self.notion_api = NotionAPI()
@@ -58,6 +66,10 @@ class NotionProcessor:
                 self.load_prepared_pages_from_cache(root_page_id)
                 self.load_page_relations_from_cache(root_page_id)
                 print("Loaded data from cache.")
+                self.refresh_updated_pages()
+                self.save_prepared_pages_to_cache(root_page_id)
+                self.save_page_relations_to_cache(root_page_id)
+                print("Cache updated with the latest changes")
                 return
             except Exception as e:
                 print(f"Failed to load cache: {e}. Running the ingestion process.")
@@ -68,12 +80,17 @@ class NotionProcessor:
                                  get_page_type_from_string(root_page['object']),
                                  root_page['url'], last_edited_time=root_page['last_edited_time'])
         self.prepared_pages.update({notion_page.id: notion_page})
-        notion_page.content = self.recursive_process_page_children(root_page)
+        notion_page.content = self.recursive_process_page_content(root_page)
 
         if self.config.CACHE_ENABLED:
             self.save_prepared_pages_to_cache(root_page_id)
             self.save_page_relations_to_cache(root_page_id)
             print("Saved data to cache.")
+
+    def refresh_updated_pages(self):
+        for page in self.prepared_pages.values():
+            if page.type != PageType.BOOKMARK:
+                self.recursive_process_unprocessed_page(page.id, page.type == PageType.DATABASE)
 
     def save_prepared_pages_to_cache(self, root_page_id):
         save_model_cache('prepared_pages.pkl',
@@ -94,7 +111,7 @@ class NotionProcessor:
         self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data
                                in page_relations_cache]
 
-    def recursive_process_page_children(self, page_info: dict, recursive_depth: int = 0) -> str | None:
+    def recursive_process_page_content(self, page_info: dict, recursive_depth: int = 0) -> str | None:
         """
         Recursively process all blocks of the given page and its sub-pages if this page hasn't been processed before
         (not in self.processed_pages). Add every processed sub-page into processed_pages and add relation to
@@ -269,8 +286,6 @@ class NotionProcessor:
 
     def recursive_process_unprocessed_page(self, page_id: str, is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):
         page_id = normalize_uuid(page_id)
-        if page_id in self.prepared_pages.keys():
-            return
 
         if not page_info:
             try:
@@ -284,6 +299,10 @@ class NotionProcessor:
                 logger.error(f"[Depth={recursive_depth}] Failed to get {'database' if is_database else 'page'} info for id: {page_id}: {e}")
                 logger.debug(f"Stack_trace for {page_id} exception", stack_info=True, stacklevel=15)
                 return
+
+        # Stop processing if page already exists in prepared_pages and wasn't updated
+        if page_id in self.prepared_pages.keys() and not first_time_after_second(page_info['last_edited_time'], self.prepared_pages[page_id].last_edited_time):
+            return
 
         # TODO don't save page only if already exists in neo4j and last_edited_time is not greater than in neo4j
         page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']),
@@ -299,7 +318,7 @@ class NotionProcessor:
         if not self._should_process_content(page_info):
             return
 
-        page.content = self.recursive_process_page_children(page_info, recursive_depth=recursive_depth)
+        page.content = self.recursive_process_page_content(page_info, recursive_depth=recursive_depth)
 
     def recursive_process_page_properties(self, page_info: dict, recursive_depth: int = 0):
         unsupported_properties = [
