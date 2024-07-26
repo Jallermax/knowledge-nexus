@@ -250,7 +250,7 @@ class Notion2MarkdownParser:
     def _handle_bookmark(block: Dict, indent: str) -> str:
         url = block['bookmark']['url']
         caption = _extract_rich_text(block['bookmark'].get('caption', []))
-        return f"{indent}[{caption or url}]({url})\n\n"
+        return f"{indent}[{caption or 'Bookmark'}]({url})\n\n"
 
     @staticmethod
     def _handle_image(block: Dict, indent: str) -> str:
@@ -289,8 +289,8 @@ class Notion2MarkdownParser:
         file_info = block['file']
         caption = _extract_rich_text(file_info.get('caption', []))
         url = file_info[file_info['type']]['url']
-        name = file_info.get('name', 'File')
-        return f"{indent}[File: [{name}]({url}){' - ' + caption if caption else ''}]\n\n"
+        name = file_info.get('name', '')
+        return f"{indent}[File: [{name or caption or 'File'}]({url}){' - ' + caption if caption else ''}]\n\n"
 
     @staticmethod
     def _handle_link_preview(block: Dict, indent: str) -> str:

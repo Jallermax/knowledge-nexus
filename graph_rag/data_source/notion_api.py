@@ -35,7 +35,7 @@ class NotionAPI:
             # Check in-memory cache
             if cache_key in self.cache:
                 cached_data, cache_time = self.cache[cache_key]
-                if time.time() - cache_time < self.cache_ttl:
+                if not self.cache_ttl or time.time() - cache_time < self.cache_ttl:
                     return cached_data
 
             # If not in memory, check file cache
@@ -45,7 +45,7 @@ class NotionAPI:
                 if os.path.exists(file_path):
                     with open(file_path, 'r') as f:
                         file_cache = json.load(f)
-                    if time.time() - file_cache['time'] < self.cache_ttl:
+                    if not self.cache_ttl or time.time() - file_cache['time'] < self.cache_ttl:
                         self.cache[cache_key] = (file_cache['data'], file_cache['time'])
                         return file_cache['data']
 

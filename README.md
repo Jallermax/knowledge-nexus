@@ -9,6 +9,10 @@
 5. `pip install -r requirements.txt`
 6. `python main.py`
 
+> ⚠️ Current cache limitations:
+> - **Notion-api cache:** Designed for session scope caching, using FS cache with long TTL will prevent from fetching updated pages
+> - **Processed pages and links cache:** Designed for rapid test and development. Prevents sync of removing of already processed and cached pages and links from graph
+
 ## 🌟 Project Overview
 
 Knowledge Nexus is an advanced personal knowledge management system that transforms the way individuals organize,
