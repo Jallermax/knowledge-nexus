@@ -16,3 +16,5 @@ spacy~=3.7.5
 setuptools~=70.1.1
 
 python-dateutil~=2.9.0.post0
+
+tiktoken~=0.7.0

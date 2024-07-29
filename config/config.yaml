@@ -22,7 +22,7 @@ notion_api:
     excluded_property_types: [
       "created_by",
       "last_edited_by",
-      "last_edited_time",
+#      "last_edited_time",
       "unique_id",
       "verification"
     ]
@@ -41,6 +41,14 @@ llm:
   model: gpt-4o-mini
   temperature: 0.7
   max_tokens: 150
+
+embeddings:
+  model: "text-embedding-3-large"
+  dimensions: 3072
+  base_url:
+  api_key: ${OPENAI_API_KEY}
+  max_tokens: 2000
+  overlap: 200
 
 cache:
   enabled: true

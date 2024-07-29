@@ -40,6 +40,15 @@ class Config:
         self.LLM_TEMPERATURE: float = llm_config['temperature']
         self.LLM_MAX_TOKENS: int = llm_config['max_tokens']
 
+        # Embeddings configuration
+        embeddings_config = config_data['embeddings']
+        self.EMBEDDINGS_MODEL: str = embeddings_config['model']
+        self.EMBEDDINGS_DIMENSIONS: str = embeddings_config['dimensions']
+        self.EMBEDDINGS_MAX_TOKENS: int = embeddings_config['max_tokens']
+        self.EMBEDDINGS_OVERLAP: int = embeddings_config['overlap']
+        self.EMBEDDINGS_BASE_URL: str = embeddings_config['base_url']
+        self.EMBEDDINGS_API_KEY: str = embeddings_config['api_key']
+
         # Neo4j configuration
         neo4j_config = config_data['neo4j']
         self.NEO4J_URI: str = neo4j_config['uri']

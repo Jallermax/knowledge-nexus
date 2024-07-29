@@ -21,6 +21,27 @@ class Neo4jManager:
     def clean_database(self):
         self.graph.query("MATCH (n) DETACH DELETE n")
         logger.info("Database has been cleaned")
+        self.create_vector_index()
+
+    def create_vector_index(self):
+        constraint_query = (
+            "CREATE CONSTRAINT chunk_id IF NOT EXISTS "
+            f"FOR (c:{PageType.CHUNK.value}) REQUIRE c.id IS UNIQUE"
+        )
+        self.graph.query(constraint_query)
+
+        # Create the vector index if it doesn't exist
+        index_query = (
+            "CREATE VECTOR INDEX chunk_embedding IF NOT EXISTS "
+            f"FOR (c:{PageType.CHUNK.value}) "
+            "ON (c.embedding) "
+            f"OPTIONS {{indexConfig: {{`vector.dimensions`: {self.config.EMBEDDINGS_DIMENSIONS}, `vector.similarity_function`: 'cosine'}}}}"
+        )
+        try:
+            self.graph.query(index_query)
+            logger.info("Vector index 'chunk_embedding' created or already exists")
+        except Exception as e:
+            logger.error(f"Failed to create vector index: {str(e)}")
 
     def check_page_exists(self, page_id: str) -> str | None:
         query = (
@@ -51,12 +72,34 @@ class Neo4jManager:
                                  'source': page.source,
                                  'last_edited_time': page.last_edited_time})
 
-    def create_entity_node(self, entity_type, entity_name):
+        # Remove existing chunks
+        self.remove_page_chunks(page.id)
+
+        # Create chunk nodes and link them to the page
+        if page.chunks:
+            self.create_chunk_nodes(page.id, page.chunks)
+
+    def remove_page_chunks(self, page_id: str):
         query = (
-            f"MERGE (e:{entity_type} {{name: $entity_name}}) "
-            "RETURN e"
+            f"MATCH (p)-[r:{RelationType.HAS_CHUNK.value}]->(c:{PageType.CHUNK.value}) "
+            "WHERE p.id = $page_id "
+            "DELETE r, c"
         )
-        self.graph.query(query, {'entity_name': entity_name})
+        self.graph.query(query, {'page_id': page_id})
+
+    def create_chunk_nodes(self, page_id: str, chunks: List[Chunk]):
+        for i, chunk in enumerate(chunks):
+            query = (
+                "MATCH (p) WHERE p.id = $page_id "
+                f"CREATE (c:{PageType.CHUNK.value} {{content: $content, embedding: $embedding, sequence: $sequence}}) "
+                f"CREATE (p)-[:{RelationType.HAS_CHUNK.value}]->(c)"
+            )
+            self.graph.query(query, {
+                'page_id': page_id,
+                'content': chunk.content,
+                'embedding': chunk.embedding,
+                'sequence': i
+            })
 
     def link_entities(self, relation: GraphRelation):
         query = (
