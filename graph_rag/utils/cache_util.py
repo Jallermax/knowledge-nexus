@@ -1,24 +1,57 @@
+import importlib
+import json
 import os
-import pickle
 import time
 from datetime import timedelta
 from typing import Dict, Any, Type, List
 
 from graph_rag.config.config_manager import Config
 from graph_rag.data_model.cacheable import Cacheable
-from graph_rag.data_model.notion_page import NotionPage, NotionRelation
+from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation
 
 config = Config()
 
 
+def get_all_cacheable_classes():
+    cacheable_classes = {}
+    for module_name in ['graph_rag.data_model.graph_data_classes']:  # Add more modules if needed
+        module = importlib.import_module(module_name)
+        for name in dir(module):
+            obj = getattr(module, name)
+            if isinstance(obj, type) and issubclass(obj, Cacheable) and obj != Cacheable:
+                cacheable_classes[name] = obj
+    return cacheable_classes
+
+
+CACHEABLE_CLASSES = get_all_cacheable_classes()
+
+
 def save_cache(file_path: str, data: Dict[str, Any]):
-    with open(file_path, 'wb') as f:
-        pickle.dump(data, f)
+    with open(file_path, 'w') as f:
+        json.dump(data, f, default=custom_serializer)
 
 
 def load_cache(file_path: str) -> Dict[str, Any]:
-    with open(file_path, 'rb') as f:
-        return pickle.load(f)
+    with open(file_path, 'r') as f:
+        return json.load(f, object_hook=custom_deserializer)
+
+
+def custom_serializer(obj):
+    if isinstance(obj, Cacheable):
+        return {
+            '__cacheable__': True,
+            'class': obj.__class__.__name__,
+            'data': obj.to_dict()
+        }
+    raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
+
+
+def custom_deserializer(obj):
+    if '__cacheable__' in obj:
+        class_name = obj['class']
+        if class_name in CACHEABLE_CLASSES:
+            return CACHEABLE_CLASSES[class_name].from_dict(obj['data'])
+    return obj
 
 
 def save_model_cache(file_name: str, model_data: Any, model_class: Type[Cacheable], key: str):
@@ -60,7 +93,7 @@ def load_model_cache(file_name: str, model_class: Type[Cacheable], key: str) -> 
     return cache_entry['data']
 
 
-def show_saved_cache_info(file_name: str):
+def show_saved_cache_info(file_name: str, show_data: bool = False):
     file_path = os.path.join(config.CACHE_PATH, file_name)
     cache_data = load_cache(file_path)
 
@@ -70,28 +103,31 @@ def show_saved_cache_info(file_name: str):
         print(f"Version: {entry['version']}")
         print(f"Save time: {time.ctime(entry['save_time'])}")
         print(f"Data size: {len(entry['data'])}")
+        if show_data:
+            import json
+            print(json.dumps(entry['data'], indent=2))
 
 
-def save_prepared_pages_to_cache(root_page_id: str, prepared_pages: Dict[str, NotionPage],
-                                 file_name: str = 'prepared_pages.pkl'):
+def save_prepared_pages_to_cache(root_page_id: str, prepared_pages: Dict[str, GraphPage],
+                                 file_name: str = 'prepared_pages.json'):
     save_model_cache(file_name,
-                     {page_id: page.to_dict() for page_id, page in prepared_pages.items()}, NotionPage,
+                     {page_id: page.to_dict() for page_id, page in prepared_pages.items()}, GraphPage,
                      root_page_id)
 
 
-def load_prepared_pages_from_cache(root_page_id: str, file_name: str = 'prepared_pages.pkl') -> Dict[str, NotionPage]:
-    prepared_pages_cache = load_model_cache(file_name, NotionPage, root_page_id)
-    return {page_id: NotionPage.from_dict(page_data) for page_id, page_data
+def load_prepared_pages_from_cache(root_page_id: str, file_name: str = 'prepared_pages.json') -> Dict[str, GraphPage]:
+    prepared_pages_cache = load_model_cache(file_name, GraphPage, root_page_id)
+    return {page_id: GraphPage.from_dict(page_data) for page_id, page_data
             in prepared_pages_cache.items()}
 
 
-def save_page_relations_to_cache(root_page_id: str, page_relations: List[NotionRelation],
-                                 file_name: str = 'page_relations.pkl'):
+def save_page_relations_to_cache(root_page_id: str, page_relations: List[GraphRelation],
+                                 file_name: str = 'page_relations.json'):
     save_model_cache(file_name,
-                     [relation.to_dict() for relation in page_relations], NotionRelation, root_page_id)
+                     [relation.to_dict() for relation in page_relations], GraphRelation, root_page_id)
 
 
-def load_page_relations_from_cache(root_page_id: str, file_name: str = 'page_relations.pkl') -> List[NotionRelation]:
-    page_relations_cache = load_model_cache(file_name, NotionRelation, root_page_id)
-    return [NotionRelation.from_dict(relation_data) for relation_data
+def load_page_relations_from_cache(root_page_id: str, file_name: str = 'page_relations.json') -> List[GraphRelation]:
+    page_relations_cache = load_model_cache(file_name, GraphRelation, root_page_id)
+    return [GraphRelation.from_dict(relation_data) for relation_data
             in page_relations_cache]
