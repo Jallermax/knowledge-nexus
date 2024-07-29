@@ -9,7 +9,7 @@ from graph_rag.data_model.notion_page import NotionPage, get_page_type_from_stri
 from graph_rag.data_source.notion_api import NotionAPI
 from graph_rag.data_source.web_scraper import get_info_from_url
 from graph_rag.processor.to_markdown_parser import Notion2MarkdownParser
-from graph_rag.utils.cache_util import load_model_cache, save_model_cache
+from graph_rag.utils.cache_util import load_prepared_pages_from_cache, load_page_relations_from_cache, save_prepared_pages_to_cache, save_page_relations_to_cache
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +63,12 @@ class NotionProcessor:
     def process_pages(self, root_page_id: str):
         if self.config.CACHE_ENABLED:
             try:
-                self.load_prepared_pages_from_cache(root_page_id)
-                self.load_page_relations_from_cache(root_page_id)
+                self.prepared_pages = load_prepared_pages_from_cache(root_page_id)
+                self.page_relations = load_page_relations_from_cache(root_page_id)
                 print("Loaded data from cache.")
                 self.refresh_updated_pages()
-                self.save_prepared_pages_to_cache(root_page_id)
-                self.save_page_relations_to_cache(root_page_id)
+                save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
+                save_page_relations_to_cache(root_page_id, self.page_relations)
                 print("Cache updated with the latest changes")
                 return
             except Exception as e:
@@ -83,33 +83,14 @@ class NotionProcessor:
         notion_page.content = self.recursive_process_page_content(root_page)
 
         if self.config.CACHE_ENABLED:
-            self.save_prepared_pages_to_cache(root_page_id)
-            self.save_page_relations_to_cache(root_page_id)
+            save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
+            save_page_relations_to_cache(root_page_id, self.page_relations)
             print("Saved data to cache.")
 
     def refresh_updated_pages(self):
         for page in self.prepared_pages.values():
             if page.type != PageType.BOOKMARK:
                 self.recursive_process_unprocessed_page(page.id, page.type == PageType.DATABASE)
-
-    def save_prepared_pages_to_cache(self, root_page_id):
-        save_model_cache('prepared_pages.pkl',
-                         {page_id: page.to_dict() for page_id, page in self.prepared_pages.items()}, NotionPage,
-                         root_page_id)
-
-    def load_prepared_pages_from_cache(self, root_page_id):
-        prepared_pages_cache = load_model_cache('prepared_pages.pkl', NotionPage, root_page_id)
-        self.prepared_pages = {page_id: NotionPage.from_dict(page_data) for page_id, page_data
-                               in prepared_pages_cache.items()}
-
-    def save_page_relations_to_cache(self, root_page_id):
-        save_model_cache('page_relations.pkl',
-                         [relation.to_dict() for relation in self.page_relations], NotionRelation, root_page_id)
-
-    def load_page_relations_from_cache(self, root_page_id):
-        page_relations_cache = load_model_cache('page_relations.pkl', NotionRelation, root_page_id)
-        self.page_relations = [NotionRelation.from_dict(relation_data) for relation_data
-                               in page_relations_cache]
 
     def recursive_process_page_content(self, page_info: dict, recursive_depth: int = 0) -> str | None:
         """
