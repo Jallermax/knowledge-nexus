@@ -1,8 +1,10 @@
 import logging
+from typing import List
 
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 
 from graph_rag.config.config_manager import Config
+from graph_rag.data_model.graph_data_classes import GraphRelation, GraphPage, Chunk, PageType, RelationType
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +22,34 @@ class Neo4jManager:
         self.graph.query("MATCH (n) DETACH DELETE n")
         logger.info("Database has been cleaned")
 
-    def create_page_node(self, page_id, title, node_type, content, url, source, last_edited_time):
+    def check_page_exists(self, page_id: str) -> str | None:
         query = (
-            f"MERGE (p:{node_type} {{id: $page_id}}) "
-            "SET p.title = $title, p.content = $content, p.url = $url, p.source = $source, p.last_edited_time = $last_edited_time"
+            "MATCH (p) WHERE p.id = $page_id "
+            "RETURN p.last_edited_time AS last_edited_time"
         )
-        self.graph.query(query, {'page_id': page_id, 'title': title, 'content': content, 'url': url, 'source': source,
-                                 'last_edited_time': last_edited_time})
+        result = self.graph.query(query, {'page_id': page_id})
+        if result:
+            return result[0]['last_edited_time']
+        return None
+
+    def create_page_node(self, page: GraphPage):
+        existing_last_edited_time = self.check_page_exists(page.id)
+
+        if existing_last_edited_time and page.last_edited_time == existing_last_edited_time:
+            logger.debug(f"Page {page.id} already exists with a newer or equal last_edited_time. Skipping update.")
+            return
+
+        query = (
+            f"MERGE (p:{page.type.value} {{id: $page_id}}) "
+            "SET p.title = $title, p.content = $content, p.url = $url, p.source = $source, "
+            "p.last_edited_time = $last_edited_time"
+        )
+        self.graph.query(query, {'page_id': page.id,
+                                 'title': page.title,
+                                 'content': page.content,
+                                 'url': page.url,
+                                 'source': page.source,
+                                 'last_edited_time': page.last_edited_time})
 
     def create_entity_node(self, entity_type, entity_name):
         query = (
@@ -35,20 +58,15 @@ class Neo4jManager:
         )
         self.graph.query(query, {'entity_name': entity_name})
 
-    def link_entities(self, entity_id_1, entity_id_2, relation_type, context):
+    def link_entities(self, relation: GraphRelation):
         query = (
             "MATCH (e1) WHERE (e1:Page OR e1:Database OR e1:Bookmark) AND e1.id = $entity_id_1 "
             "MATCH (e2) WHERE (e2:Page OR e2:Database OR e2:Bookmark) AND e2.id = $entity_id_2 "
-            f"MERGE (e1)-[:{relation_type} {{context: $context}}]->(e2)"
+            f"MERGE (e1)-[:{relation.relation_type.value} {{context: $context}}]->(e2)"
         )
-        self.graph.query(query, {'entity_id_1': entity_id_1, 'entity_id_2': entity_id_2, 'context': context if context else ''})
-
-    def link_page_to_entity(self, page_id, entity_type, entity_name):
-        query = (
-            f"MATCH (p:Page {{id: $page_id}}), (e:{entity_type} {{name: $entity_name}}) "
-            "MERGE (p)-[:MENTIONS]->(e)"
-        )
-        self.graph.query(query, {'page_id': page_id, 'entity_name': entity_name})
+        self.graph.query(query, {'entity_id_1': relation.from_page_id,
+                                 'entity_id_2': relation.to_page_id,
+                                 'context': relation.context if relation.context else ''})
 
     def get_entities_for_page(self, page_id):
         query = (
@@ -77,4 +95,5 @@ class Neo4jManager:
             "LIMIT 10"
         )
         result = self.graph.query(query, {'entity_name': entity_name})
-        return [{'type': row['related_type'][0], 'name': row['related_name'], 'strength': row['strength']} for row in result]
+        return [{'type': row['related_type'][0], 'name': row['related_name'], 'strength': row['strength']} for row in
+                result]

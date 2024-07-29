@@ -1,11 +1,12 @@
 import hashlib
-import time
 import json
 import os
+import time
 from functools import wraps
-from typing import Callable, Any
+from typing import Callable
 
 import requests
+
 from graph_rag.config.config_manager import Config
 
 

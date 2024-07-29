@@ -5,11 +5,13 @@ from datetime import datetime
 from typing import Dict, List
 
 from graph_rag.config.config_manager import Config
-from graph_rag.data_model.notion_page import NotionPage, get_page_type_from_string, NotionRelation, RelationType, PageType
+from graph_rag.data_model.graph_data_classes import GraphPage, get_page_type_from_string, GraphRelation, RelationType, \
+    PageType, ProcessedData
+from graph_rag.data_source.base_content_provider import ContentProvider
 from graph_rag.data_source.notion_api import NotionAPI
 from graph_rag.data_source.web_scraper import get_info_from_url
 from graph_rag.processor.to_markdown_parser import Notion2MarkdownParser
-from graph_rag.utils.cache_util import load_prepared_pages_from_cache, load_page_relations_from_cache, save_prepared_pages_to_cache, save_page_relations_to_cache
+from graph_rag.utils import cache_util
 
 logger = logging.getLogger(__name__)
 
@@ -50,42 +52,53 @@ def first_time_after_second(first_time: str, second_time: str):
     return dt1 > dt2
 
 
-class NotionProcessor:
+class NotionProcessor(ContentProvider):
     def __init__(self):
+        super().__init__()
         self.notion_api = NotionAPI()
         self.config = Config()
         self.content_parser = Notion2MarkdownParser()
-        self.prepared_pages: Dict[str, NotionPage] = {}
-        self.page_relations: List[NotionRelation] = []
+        self.prepared_pages: Dict[str, GraphPage] = {}
+        self.page_relations: List[GraphRelation] = []
         os.makedirs(self.config.CACHE_PATH, exist_ok=True)
         logger.info("NotionProcessor initialized")
+
+    def fetch_data(self) -> ProcessedData:
+        self.process_pages(self.config.NOTION_ROOT_PAGE_ID)
+
+        prepared_pages = self.prepared_pages
+        logger.info(f"Prepared {len(prepared_pages)} pages from Notion")
+        relations = self.page_relations
+        logger.info(f"Prepared {len(relations)} relations from Notion")
+
+        return ProcessedData(self.prepared_pages, self.page_relations)
 
     def process_pages(self, root_page_id: str):
         if self.config.CACHE_ENABLED:
             try:
-                self.prepared_pages = load_prepared_pages_from_cache(root_page_id)
-                self.page_relations = load_page_relations_from_cache(root_page_id)
-                print("Loaded data from cache.")
+                self.prepared_pages = cache_util.load_prepared_pages_from_cache(root_page_id)
+                self.page_relations = cache_util.load_page_relations_from_cache(root_page_id)
+                logger.info("Loaded data from cache.")
                 self.refresh_updated_pages()
-                save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
-                save_page_relations_to_cache(root_page_id, self.page_relations)
-                print("Cache updated with the latest changes")
+                cache_util.save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
+                cache_util.save_page_relations_to_cache(root_page_id, self.page_relations)
+                logger.info("Cache updated with the latest changes")
                 return
             except Exception as e:
-                print(f"Failed to load cache: {e}. Running the ingestion process.")
+                logger.warning(f"Failed to load cache: {e}. Running the ingestion process.")
 
         logger.info(f"Processing root page: {root_page_id}")
         root_page = self.notion_api.get_root_page_info(root_page_id)
-        notion_page = NotionPage(normalize_uuid(root_page['id']), _extract_title(root_page),
-                                 get_page_type_from_string(root_page['object']),
-                                 root_page['url'], last_edited_time=root_page['last_edited_time'])
+        notion_page = GraphPage(normalize_uuid(root_page['id']), _extract_title(root_page),
+                                get_page_type_from_string(root_page['object']),
+                                root_page['url'], source='Notion', last_edited_time=root_page['last_edited_time'])
         self.prepared_pages.update({notion_page.id: notion_page})
         notion_page.content = self.recursive_process_page_content(root_page)
 
         if self.config.CACHE_ENABLED:
-            save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
-            save_page_relations_to_cache(root_page_id, self.page_relations)
-            print("Saved data to cache.")
+            cache_util.save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
+            cache_util.save_page_relations_to_cache(root_page_id, self.page_relations)
+            logger.info("Saved processed notion data to cache.")
 
     def refresh_updated_pages(self):
         for page in self.prepared_pages.values():
@@ -138,7 +151,7 @@ class NotionProcessor:
     def save_relation_and_process_page(self, parent_id: str, rel_type: RelationType, page_id: str,
                                        rel_context: str = None,
                                        is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):
-        self.page_relations.append(NotionRelation(normalize_uuid(parent_id), rel_type, normalize_uuid(page_id), rel_context))
+        self.page_relations.append(GraphRelation(normalize_uuid(parent_id), rel_type, normalize_uuid(page_id), rel_context))
         if rel_type == RelationType.REFERENCES and not self.config.NOTION_RECURSIVE_PROCESS_REFERENCE_PAGES:
             return
         self.recursive_process_unprocessed_page(page_id, is_database=is_database, page_info=page_info,
@@ -147,7 +160,7 @@ class NotionProcessor:
     def save_relation_and_process_bookmark(self, parent_id: str, url: str,
                                            rel_type: RelationType = RelationType.REFERENCES,
                                            rel_context: str = None, recursive_depth: int = 0):
-        self.page_relations.append(NotionRelation(normalize_uuid(parent_id), rel_type, url, rel_context))
+        self.page_relations.append(GraphRelation(normalize_uuid(parent_id), rel_type, url, rel_context))
         self.process_unprocessed_bookmark(url, recursive_depth=recursive_depth)
 
     def recursive_process_block(self, block: dict, parent_id: str, indent_level: int = 0,
@@ -261,7 +274,7 @@ class NotionProcessor:
                 title, description = get_info_from_url(url)
             except:
                 title, description = '', ''
-            bookmark_page = NotionPage(url, title, PageType.BOOKMARK, url, content=description, source='Web')
+            bookmark_page = GraphPage(url, title, PageType.BOOKMARK, url, content=description, source='Web')
             logger.info(f"[Depth={recursive_depth}] Adding new processed bookmark[{len(self.prepared_pages)}]: [{title}]({url})")
             self.prepared_pages.update({url: bookmark_page})
 
@@ -286,8 +299,8 @@ class NotionProcessor:
             return
 
         # TODO don't save page only if already exists in neo4j and last_edited_time is not greater than in neo4j
-        page = NotionPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']),
-                          page_info['url'], last_edited_time=page_info['last_edited_time'])
+        page = GraphPage(page_id, _extract_title(page_info), get_page_type_from_string(page_info['object']),
+                         page_info['url'], source='Notion', last_edited_time=page_info['last_edited_time'])
 
         if not self._should_add_page(page_info):
             return
@@ -366,7 +379,7 @@ class NotionProcessor:
         return True
 
     @staticmethod
-    def _update_page_title(page_info: dict, page: NotionPage):
+    def _update_page_title(page_info: dict, page: GraphPage):
         if page_info['archived']:
             page.title = f"[ARCHIVED] {page.title}"
         elif page_info['in_trash']:

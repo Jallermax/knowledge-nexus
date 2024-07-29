@@ -1,9 +1,10 @@
 import logging
 from typing import Dict, List
 
-from graph_rag.data_model.notion_page import NotionPage, NotionRelation, PageType
-from graph_rag.ai_agent.base_agent import BaseAgent
 from graph_rag.config.config_manager import Config
+from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation, PageType, ProcessedData
+from graph_rag.data_source.base_content_provider import ContentProvider
+from graph_rag.processor.base_processor import Processor
 from graph_rag.processor.entity_extractor import EntityExtractor
 from graph_rag.processor.notion_processor import NotionProcessor
 from graph_rag.storage.neo4j_manager import Neo4jManager
@@ -17,7 +18,8 @@ class DataProcessingPipeline:
         self.notion_processor = NotionProcessor()
         self.entity_extractor = EntityExtractor()
         self.neo4j_manager = Neo4jManager()
-        self.ai_agent = BaseAgent()
+        self.data_sources: List[ContentProvider] = []
+        self.processors: List[Processor] = []
 
     def process_notion_page(self, page_id):
         # Process the Notion page
@@ -28,92 +30,88 @@ class DataProcessingPipeline:
         logger.info(f"Prepared {len(relations)} relations from Notion")
 
         for page in prepared_pages.values():
-            self.save_notion_page(page)
+            self.neo4j_manager.create_page_node(page)
 
         # TODO check existing pages not only in prepared_pages, but in neo4j as well
 
         if self.config.NOTION_CREATE_UNPROCESSED_NODES:
             self.add_missing_pages(prepared_pages, relations)
         else:
-            """ Cleaning up relations without existing pages """
-            relations_count_before = len(relations)
-            relations = [relation for relation in relations if
-                         relation.from_page_id in prepared_pages and relation.to_page_id in prepared_pages]
-            logger.info(f"{len(relations) - relations_count_before} Relations with unprocessed pages was deleted")
+            relations = self.clean_orphan_relations(prepared_pages, relations)
 
         for relation in relations:
-            self.neo4j_manager.link_entities(relation.from_page_id, relation.to_page_id, relation.relation_type.value, relation.context)
+            self.neo4j_manager.link_entities(relation)
 
         logger.info("Notion structure has been parsed and stored in Neo4j.")
 
-    def save_notion_page(self, page):
-        self.neo4j_manager.create_page_node(page.id, page.title, page.type.value, page.content, page.url, page.source, page.last_edited_time)
-
-    def add_missing_pages(self, prepared_pages: Dict[str, NotionPage], relations: List[NotionRelation]):
+    def add_missing_pages(self, prepared_pages: Dict[str, GraphPage], relations: List[GraphRelation]):
         logger.info("Adding unprocessed pages from relations to prepared_pages")
         missing_page_count = 0
         for relation in relations:
-            if relation.from_page_id not in prepared_pages:
-                self.add_missing_page(relation.from_page_id, prepared_pages)
+            is_from_page_prepared = relation.from_page_id in prepared_pages
+            is_to_page_prepared = relation.to_page_id in prepared_pages
+            if not is_from_page_prepared:
+                self.add_missing_page(relation.from_page_id, prepared_pages, prepared_pages[
+                    relation.to_page_id].source if is_to_page_prepared else 'Unknown')
                 missing_page_count += 1
 
-            if relation.to_page_id not in prepared_pages:
-                self.add_missing_page(relation.to_page_id, prepared_pages)
+            if not is_to_page_prepared:
+                self.add_missing_page(relation.to_page_id, prepared_pages, prepared_pages[
+                    relation.from_page_id].source if is_from_page_prepared else 'Unknown')
                 missing_page_count += 1
         logger.info(f"{missing_page_count} unprocessed pages from relations was added to graph")
 
-    def add_missing_page(self, page_id: str, prepared_pages: Dict[str, NotionPage]):
-        new_page = NotionPage(
+    def add_missing_page(self, page_id: str, prepared_pages: Dict[str, GraphPage], source: str = 'Unknown'):
+        new_page = GraphPage(
             id=page_id,
             title="Unprocessed",
             type=PageType.PAGE,
             url='',
-            source='Notion'
+            source=source
         )
         logger.info(f"Adding unprocessed page {page_id}")
-        self.save_notion_page(new_page)
+        self.neo4j_manager.create_page_node(new_page)
         prepared_pages[page_id] = new_page
 
-    def process_content(self, content_data):
-        page_id = content_data['page_id']
-        title = content_data['title']
-        content = content_data['content']
+    def add_data_source(self, data_source: ContentProvider):
+        self.data_sources.append(data_source)
 
-        # Store page in Neo4j
-        self.neo4j_manager.create_page_node(page_id, title, content)
+    def add_processor(self, processor: Processor):
+        self.processors.append(processor)
 
-        # Extract entities
-        entities = self.entity_extractor.extract_entities(content)
+    def run(self):
+        # Step 1: Fetch data from all sources
+        processed_data = ProcessedData(pages={}, relations=[])
+        pages = processed_data.pages
+        relations = processed_data.relations
+        for data_source in self.data_sources:
+            source_data = data_source.fetch_data()
+            pages.update(source_data.pages)
+            relations.extend(source_data.relations)
 
-        # Store entities and link to page
-        for entity_type, entity_list in entities.items():
-            for entity_name in entity_list:
-                self.neo4j_manager.create_entity_node(entity_type, entity_name)
-                self.neo4j_manager.link_page_to_entity(page_id, entity_type, entity_name)
+        # Step 2: Run all processors
+        for processor in self.processors:
+            processor.process(processed_data)
 
-        # Generate insights using AI agent
-        insight_prompt = f"Generate a brief insight about the following content:\n\n{content[:1000]}..."
-        insight = self.ai_agent.generate_response(insight_prompt)
+        # Step 3: Save data to Neo4j graph
+        for page in processed_data.pages.values():
+            self.neo4j_manager.create_page_node(page)
 
-        # Get related pages for the first entity (as an example)
-        if entities:
-            first_entity_type = list(entities.keys())[0]
-            first_entity_name = entities[first_entity_type][0]
-            related_pages = self.neo4j_manager.get_related_pages(first_entity_type, first_entity_name)
+        if self.config.NOTION_CREATE_UNPROCESSED_NODES:
+            self.add_missing_pages(processed_data.pages, processed_data.relations)
         else:
-            related_pages = []
+            processed_data.relations = self.clean_orphan_relations(processed_data.pages, processed_data.relations)
 
-        # Get entity relationships for the first entity (as an example)
-        if entities:
-            entity_relationships = self.neo4j_manager.get_entity_relationships(first_entity_type, first_entity_name)
-        else:
-            entity_relationships = []
+        for relation in processed_data.relations:
+            self.neo4j_manager.link_entities(relation)
 
-        return {
-            "page_id": page_id,
-            "title": title,
-            "entities": entities,
-            "insight": insight,
-            "related_pages": related_pages,
-            "entity_relationships": entity_relationships
-        }
+        logger.info("Notion structure has been parsed and stored in Neo4j.")
+
+    @staticmethod
+    def clean_orphan_relations(pages, relations):
+        """ Cleaning up relations without existing pages """
+        relations_count_before = len(relations)
+        relations = [relation for relation in relations if
+                     relation.from_page_id in pages and relation.to_page_id in pages]
+        logger.info(f"{len(relations) - relations_count_before} Relations with unprocessed pages was deleted")
+        return relations

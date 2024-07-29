@@ -20,6 +20,7 @@ class Config:
         self.NOTION_API_TIMEOUT: int = notion_config['timeout']
         self.NOTION_CACHE_TTL_SECONDS: int = notion_config['cache_ttl_seconds']
         self.NOTION_CACHE_PATH: str = notion_config['cache_path']
+        self.NOTION_ROOT_PAGE_ID = notion_config['root_page_id']
         self.NOTION_PAGE_MAX_DEPTH: int = notion_config['page_max_depth']
         self.NOTION_ADD_ARCHIVED_PAGE_NODES: bool = notion_config['add_archived_page_nodes']
         self.NOTION_ADD_REMOVED_PAGE_NODES: bool = notion_config['add_removed_page_nodes']

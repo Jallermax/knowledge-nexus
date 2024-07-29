@@ -10,6 +10,7 @@ notion_api:
   cache_ttl_seconds: 3600
   cache_path:
   api_key: ${NOTION_API_KEY}
+  root_page_id: ${NOTION_ROOT_PAGE_ID}
   #  processing strategy
   page_max_depth: 200
   add_archived_page_nodes: false

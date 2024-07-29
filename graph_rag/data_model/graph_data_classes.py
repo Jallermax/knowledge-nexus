@@ -25,7 +25,7 @@ def get_relation_type_from_string(relation_type_str: str) -> RelationType:
 
 
 @dataclass
-class NotionPage(Cacheable):
+class GraphPage(Cacheable):
     id: str
     title: str
     type: PageType
@@ -40,7 +40,7 @@ class NotionPage(Cacheable):
 
 
 @dataclass
-class NotionRelation(Cacheable):
+class GraphRelation(Cacheable):
     from_page_id: str
     relation_type: RelationType
     to_page_id: str
@@ -49,3 +49,9 @@ class NotionRelation(Cacheable):
     @classmethod
     def get_class_version(cls) -> int:
         return 1
+
+
+@dataclass
+class ProcessedData:
+    pages: Dict[str, GraphPage]
+    relations: List[GraphRelation]
