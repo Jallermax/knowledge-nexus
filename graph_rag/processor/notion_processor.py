@@ -78,10 +78,10 @@ class NotionProcessor(ContentProvider):
             try:
                 self.prepared_pages = cache_util.load_prepared_pages_from_cache(root_page_id)
                 self.page_relations = cache_util.load_page_relations_from_cache(root_page_id)
-                logger.info("Loaded data from cache.")
-                self.refresh_updated_pages()
-                cache_util.save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
-                cache_util.save_page_relations_to_cache(root_page_id, self.page_relations)
+                logger.info(f"Loaded from cache: {len(self.prepared_pages)} pages and {len(self.page_relations)} relations")
+                # self.refresh_updated_pages()
+                # cache_util.save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
+                # cache_util.save_page_relations_to_cache(root_page_id, self.page_relations)
                 logger.info("Cache updated with the latest changes")
                 return
             except Exception as e:
@@ -101,8 +101,10 @@ class NotionProcessor(ContentProvider):
             logger.info("Saved processed notion data to cache.")
 
     def refresh_updated_pages(self):
-        for page in self.prepared_pages.values():
+        logger.info("Refreshing processed pages with the latest changes")
+        for i, page in enumerate(self.prepared_pages.values()):
             if page.type != PageType.BOOKMARK:
+                logger.info(f"Checking page {i}/{len(self.prepared_pages)}: {page.title}-{page.id}")
                 self.recursive_process_unprocessed_page(page.id, page.type == PageType.DATABASE)
 
     def recursive_process_page_content(self, page_info: dict, recursive_depth: int = 0) -> str | None:

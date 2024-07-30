@@ -59,7 +59,8 @@ class ChunkCreator:
         # If no chunks were created (i.e., the content was shorter than available_tokens),
         # create a single chunk with all the content
         if not chunks:
-            chunks.append(constant_part + page.content)
+            embedded_part = f"{constant_part if constant_part else ''}{page.content if page.content else ''}"
+            chunks.append(embedded_part)
 
         return chunks
 
@@ -107,7 +108,7 @@ class ContentChunkerAndEmbedder(Processor):
                 processed_content.pages = cache_util.load_prepared_pages_from_cache(root_page_id, CACHE_FILE_NAME)
                 logger.info("Chunked pages loaded from cache")
                 return
-            except FileNotFoundError:
+            except:
                 logger.warning("No cache found for chunked pages. Processing from scratch.")
 
         progress_bar = LoggingProgressBar(len(processed_content.pages), prefix='Processing:',
@@ -115,13 +116,10 @@ class ContentChunkerAndEmbedder(Processor):
         handler = ProgressBarHandler(progress_bar)
         logger.addHandler(handler)
         progress_bar.start()
-        count = 0
         for _, page in processed_content.pages.items():
             progress_bar.update()
             if page.type in [PageType.PAGE, PageType.DATABASE]:
                 self._process_page(page)
-                # count += 1
-                # print(f"Embedding chunks for page {count}/{len(processed_content.pages)}: {page.title}")
 
         progress_bar.finish()
         logger.removeHandler(handler)
@@ -131,6 +129,7 @@ class ContentChunkerAndEmbedder(Processor):
             logger.info("Chunked pages saved to cache")
 
     def _process_page(self, page: GraphPage) -> None:
+        logger.debug(f"Chunking and embedding content of page {page.title}-{page.id}")
         chunks = self.chunk_creator.create_chunks(page)
         cleaned_chunks = [self.text_cleaner.clean(chunk) for chunk in chunks]
         chunk_embeddings = self.embeddings.embed_documents(cleaned_chunks)
