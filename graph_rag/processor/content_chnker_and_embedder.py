@@ -16,9 +16,13 @@ logger = logging.getLogger(__name__)
 
 class TextCleaner:
     @staticmethod
-    def clean(text: str) -> str:
-        # Remove special characters but keep basic punctuation
-        cleaned = re.sub(r'[^a-zA-Z0-9\s.,!?]', '', text)
+    def clean_markdown(text: str) -> str:
+        # Convert headings to sentences
+        text = re.sub(r'^#+\s*(.*?)$', r'\1.', text, flags=re.MULTILINE)
+
+        # Remove special characters except those specified
+        cleaned = re.sub(r'[^a-zA-Z0-9\s.,!?;:/+\-]', '', text)
+
         # Remove extra whitespace
         return re.sub(r'\s+', ' ', cleaned).strip()
 
@@ -130,7 +134,7 @@ class ContentChunkerAndEmbedder(Processor):
     def _process_page(self, page: GraphPage) -> None:
         logger.debug(f"Chunking and embedding content of page {page.title}-{page.id}")
         chunks = self.chunk_creator.create_chunks(page)
-        cleaned_chunks = [self.text_cleaner.clean(chunk) for chunk in chunks]
+        cleaned_chunks = [self.text_cleaner.clean_markdown(chunk) for chunk in chunks]
         chunk_embeddings = self.embeddings.embed_documents(cleaned_chunks)
 
         page.chunks = [
