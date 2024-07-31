@@ -15,6 +15,8 @@
 
 ## 🌟 Project Overview
 
+![ingestion visualization](/docs/ingestion.png)
+
 Knowledge Nexus is an advanced personal knowledge management system that transforms the way individuals organize,
 process, and discover insights from their digital content. By leveraging the power of AI and graph databases, this
 project addresses the challenge of information overload and disconnected data silos that many knowledge workers face in
@@ -154,55 +156,43 @@ Knowledge Nexus is primarily designed for individual users who:
 
 ## 🛠️ TODO: Implementation Steps
 
-1. Data preparation
-    - [X] Prepare personal context
-    - [ ] Export Notion Database as a zip file
-        - [X] Prepare Notion system structure, tags, projects
-    - [ ] Export Pocket articles
-        - [ ] Prepare Pocket system tags
-    - [ ] Prepare sample web pages from bookmarks for scraping
-        - [ ] Determine content page vs information source url
-    - [ ] Prepare Todoist tags, projects and structure
-
-2. Data Source Integration
+1. Data Source Integration
     - [X] Implement [Notion API](https://developers.notion.com/reference/get-database) client
-    - [ ] Notion: Process only pages with last_edited_time > than last_edited_time in graph
-    - [ ] Implement Notion exported zip parser
-    - [ ] Develop Pocket exported file parser
+    - [X] Notion: Process only pages with last_edited_time > than last_edited_time in graph
     - [ ] Develop Pocket API integration
     - [ ] Create a web scraper for processing URLs
-    - [ ] Create unified data models
-    - [ ] Design a unified interface for data source processors
+    - [X] Create unified data models
+    - [X] Design a unified interface for data source processors
 
-3. Content Processing
+2. Content Processing
     - [ ] Implement entity extraction using NLP techniques
     - [ ] Develop an insight generation module using LLMs
     - [ ] Create a content summarization feature
     - [X] Add file caching of raw and processed content
-    - [ ] Create content embeddings for semantic search
+    - [X] Create content embeddings for semantic search
 
-4. Knowledge Graph Management
+3. Knowledge Graph Management
     - [X] Set up Neo4j database integration
     - [X] Implement node and relationship creation logic
     - [ ] Develop query methods for retrieving related content
     - [ ] Create visualizations for the knowledge graph
 
-5. AI Agents
+4. AI Agents
     - [ ] Design a flexible AI agent architecture
     - [ ] Implement specific agents for entity extraction, insight generation, and summarization
     - [ ] Develop a system for managing different LLM models and configurations
 
-6. Pipeline Orchestration
+5. Pipeline Orchestration
     - [ ] Create a modular pipeline for processing content from ingestion to storage
     - [ ] Implement error handling and logging throughout the pipeline
     - [ ] Develop a system for incremental updates and change detection
 
-7. User Interface
+6. User Interface
     - [ ] Add Streamlit for interacting with the system
     - [ ] Implement natural language querying of the knowledge graph
     - [ ] Create a web-based dashboard for visualizing insights and connections (InfraNodus-like)
 
-8. Testing and Quality Assurance
+7. Testing and Quality Assurance
     - [ ] Develop unit tests for each module
     - [ ] Implement integration tests for the entire pipeline
     - [ ] Create a suite of sample data for testing and demonstration
@@ -210,7 +200,7 @@ Knowledge Nexus is primarily designed for individual users who:
     - [ ] Evaluate relation and weights creation using different models, different contexts, and different prompts
     - [ ] Evaluate GraphRAG using different embeddings and prompts
 
-9. Advanced Features
+8. Advanced Features
     - [ ] Implement token-cost [estimation](https://github.com/AgentOps-AI/tokencost)
     - [ ] Implement langfuse for agents and flow evaluation
 
