@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 
 import yaml
 from dotenv import load_dotenv
@@ -10,7 +10,7 @@ class Config:
         load_dotenv()  # Load environment variables from .env file
 
         # Load configuration from config.yaml
-        config_data: Dict[str, Any] = parse_config('config/config.yaml', tag=None, default_value='')
+        config_data: dict[str, Any] = parse_config('config/config.yaml', tag=None, default_value='')
 
         # Notion API configuration
         notion_config = config_data['notion_api']

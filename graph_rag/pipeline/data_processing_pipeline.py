@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, List
 
 from graph_rag.config.config_manager import Config
 from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation, PageType, ProcessedData
@@ -19,8 +18,6 @@ class DataProcessingPipeline:
         self.notion_processor = NotionProcessor()
         self.entity_extractor = EntityExtractor()
         self.neo4j_manager = Neo4jManager()
-        self.data_sources: List[ContentProvider] = []
-        self.processors: List[Processor] = []
 
     def process_notion_page(self, page_id):
         # Process the Notion page
@@ -39,13 +36,13 @@ class DataProcessingPipeline:
             self.add_missing_pages(prepared_pages, relations)
         else:
             relations = self.clean_orphan_relations(prepared_pages, relations)
+        self.data_sources: list[ContentProvider] = []
+        self.processors: list[Processor] = []
 
-        for relation in relations:
-            self.neo4j_manager.link_entities(relation)
 
         logger.info("Notion structure has been parsed and stored in Neo4j.")
 
-    def add_missing_pages(self, prepared_pages: Dict[str, GraphPage], relations: List[GraphRelation]):
+    def add_missing_pages(self, prepared_pages: dict[str, GraphPage], relations: list[GraphRelation]):
         logger.info("Adding unprocessed pages from relations to prepared_pages")
         missing_page_count = 0
         for relation in relations:
@@ -62,7 +59,7 @@ class DataProcessingPipeline:
                 missing_page_count += 1
         logger.info(f"{missing_page_count} unprocessed pages from relations was added to graph")
 
-    def add_missing_page(self, page_id: str, prepared_pages: Dict[str, GraphPage], source: str = 'Unknown'):
+    def add_missing_page(self, page_id: str, prepared_pages: dict[str, GraphPage], source: str = 'Unknown'):
         new_page = GraphPage(
             id=page_id,
             title="Unprocessed",
@@ -107,9 +104,10 @@ class DataProcessingPipeline:
 
         logger.info("Notion structure has been parsed and stored in Neo4j.")
 
-    def create_processed_page_nodes(self, processed_pages: List[GraphPage]) -> None:
+    def create_processed_page_nodes(self, processed_pages: list[GraphPage]) -> None:
         progress_bar = LoggingProgressBar(len(processed_pages), prefix='Processing:',
-                                          suffix=f"pages saved to graph out of {len(processed_pages)} pages ", length=50)
+                                          suffix=f"pages saved to graph out of {len(processed_pages)} pages ",
+                                          length=50)
         handler = ProgressBarHandler(progress_bar)
         logger.addHandler(handler)
         progress_bar.start()

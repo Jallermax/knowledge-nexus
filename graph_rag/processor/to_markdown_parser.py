@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from typing import List, Dict
 
 from graph_rag.config.config_manager import Config
 
@@ -74,7 +73,7 @@ class Notion2MarkdownParser:
         for block_type in self.config.NOTION_MARKDOWN_PARSER_EXCLUDED_BLOCK_TYPES:
             self.block_handlers.pop(block_type, '')
 
-    def parse_properties(self, properties: Dict) -> str:
+    def parse_properties(self, properties: dict) -> str:
         markdown = ""
         for prop_name, prop in properties.items():
             prop_type = prop['type']
@@ -85,7 +84,7 @@ class Notion2MarkdownParser:
                 logger.warning(f"Unsupported property type: {prop_type}")
         return f"###Properties:\n{markdown}" if markdown else ''
 
-    def parse_block(self, block: Dict, indent_level: int = 0) -> str:
+    def parse_block(self, block: dict, indent_level: int = 0) -> str:
         block_type = block['type']
         if block_type in self.block_handlers:
             return self.block_handlers[block_type](block, (self.indent * indent_level))
@@ -98,7 +97,7 @@ class Notion2MarkdownParser:
         return "✅" if value else "❌"
 
     @staticmethod
-    def _handle_created_by(value: Dict) -> str:
+    def _handle_created_by(value: dict) -> str:
         return f"Created by {value.get('name', 'Unknown')}"
 
     @staticmethod
@@ -106,7 +105,7 @@ class Notion2MarkdownParser:
         return _format_date(value)
 
     @staticmethod
-    def _handle_date(value: Dict) -> str:
+    def _handle_date(value: dict) -> str:
         start = value.get('start')
         end = value.get('end')
         if end:
@@ -118,15 +117,15 @@ class Notion2MarkdownParser:
         return value
 
     @staticmethod
-    def _handle_files(value: List[Dict]) -> str:
+    def _handle_files(value: list[dict]) -> str:
         return ", ".join([f"[{file.get('name', 'Unnamed')}]({file['external']['url']})" for file in value])
 
     @staticmethod
-    def _handle_formula(value: Dict) -> str:
+    def _handle_formula(value: dict) -> str:
         return str(value.get(value['type'], 'N/A'))
 
     @staticmethod
-    def _handle_last_edited_by(value: Dict) -> str:
+    def _handle_last_edited_by(value: dict) -> str:
         return f"Last edited by {value.get('name', 'Unknown')}"
 
     @staticmethod
@@ -134,7 +133,7 @@ class Notion2MarkdownParser:
         return _format_date(value)
 
     @staticmethod
-    def _handle_multi_select(value: List[Dict]) -> str:
+    def _handle_multi_select(value: list[dict]) -> str:
         return ", ".join([option['name'] for option in value])
 
     @staticmethod
@@ -142,7 +141,7 @@ class Notion2MarkdownParser:
         return str(value)
 
     @staticmethod
-    def _handle_people(value: List[Dict]) -> str:
+    def _handle_people(value: list[dict]) -> str:
         return ", ".join([person.get('name', 'Unknown') for person in value])
 
     @staticmethod
@@ -150,27 +149,27 @@ class Notion2MarkdownParser:
         return value
 
     @staticmethod
-    def _handle_relation(value: List[Dict]) -> str:
+    def _handle_relation(value: list[dict]) -> str:
         return ", ".join([f"[Related Page]({page['id']})" for page in value])
 
     @staticmethod
-    def _handle_rollup(value: Dict) -> str:
+    def _handle_rollup(value: dict) -> str:
         return f"{value['function']}: {value.get(value['type'], 'N/A')}"
 
     @staticmethod
-    def _handle_rich_text(value: List[Dict]) -> str:
+    def _handle_rich_text(value: list[dict]) -> str:
         return _extract_rich_text(value)
 
     @staticmethod
-    def _handle_select(value: Dict) -> str:
+    def _handle_select(value: dict) -> str:
         return value.get('name', 'N/A')
 
     @staticmethod
-    def _handle_status(value: Dict) -> str:
+    def _handle_status(value: dict) -> str:
         return value.get('name', 'N/A')
 
     @staticmethod
-    def _handle_title(value: List[Dict]) -> str:
+    def _handle_title(value: list[dict]) -> str:
         return _extract_rich_text(value)
 
     @staticmethod
@@ -178,12 +177,12 @@ class Notion2MarkdownParser:
         return f"[{value}]({value})"
 
     @staticmethod
-    def _handle_unique_id(value: Dict) -> str:
+    def _handle_unique_id(value: dict) -> str:
         prefix = value.get('prefix', '')
         return f"{prefix}{value['number']}"
 
     @staticmethod
-    def _handle_verification(value: Dict) -> str:
+    def _handle_verification(value: dict) -> str:
         state = value['state']
         if state == 'verified':
             verified_by = value['verified_by'].get('name', 'Unknown') if value['verified_by'] else 'Unknown'
@@ -193,99 +192,99 @@ class Notion2MarkdownParser:
 
     # Block processing methods
     @staticmethod
-    def _handle_paragraph(block: Dict, indent: str) -> str:
+    def _handle_paragraph(block: dict, indent: str) -> str:
         return f"{indent}{_extract_rich_text(block['paragraph']['rich_text'])}\n\n"
 
     @staticmethod
-    def _handle_heading(block: Dict, indent: str) -> str:
+    def _handle_heading(block: dict, indent: str) -> str:
         level = int(block['type'][-1])
         return f"{indent}{'#' * level} {_extract_rich_text(block[block['type']]['rich_text'])}\n\n"
 
     @staticmethod
-    def _handle_bulleted_list_item(block: Dict, indent: str) -> str:
+    def _handle_bulleted_list_item(block: dict, indent: str) -> str:
         return f"{indent}- {_extract_rich_text(block['bulleted_list_item']['rich_text'])}\n"
 
     @staticmethod
-    def _handle_numbered_list_item(block: Dict, indent: str) -> str:
+    def _handle_numbered_list_item(block: dict, indent: str) -> str:
         return f"{indent}1. {_extract_rich_text(block['numbered_list_item']['rich_text'])}\n"
 
     @staticmethod
-    def _handle_to_do(block: Dict, indent: str) -> str:
+    def _handle_to_do(block: dict, indent: str) -> str:
         checkbox = "x" if block['to_do']['checked'] else " "
         return f"{indent}- [{checkbox}] {_extract_rich_text(block['to_do']['rich_text'])}\n"
 
     @staticmethod
-    def _handle_toggle(block: Dict, indent: str) -> str:
+    def _handle_toggle(block: dict, indent: str) -> str:
         summary = _extract_rich_text(block['toggle']['rich_text'])
         return f"{indent}<details>\n{indent}<summary>{summary}</summary>\n\n"
 
     @staticmethod
-    def _handle_code(block: Dict, indent: str) -> str:
+    def _handle_code(block: dict, indent: str) -> str:
         language = block['code']['language']
         code = _extract_rich_text(block['code']['rich_text'])
         return f"{indent}```{language}\n{code}\n{indent}```\n\n"
 
     @staticmethod
-    def _handle_quote(block: Dict, indent: str) -> str:
+    def _handle_quote(block: dict, indent: str) -> str:
         return f"{indent}> {_extract_rich_text(block['quote']['rich_text'])}\n\n"
 
     @staticmethod
-    def _handle_callout(block: Dict, indent: str) -> str:
+    def _handle_callout(block: dict, indent: str) -> str:
         icon = block['callout']['icon']
         icon_string = f":{icon['emoji']}:" if icon['type'] == 'emoji' else f"[Icon: {icon['type']}]"
         text = _extract_rich_text(block['callout']['rich_text'])
         return f"{indent}> {icon_string} {text}\n\n"
 
     @staticmethod
-    def _handle_child_database(block: Dict, indent: str) -> str:
+    def _handle_child_database(block: dict, indent: str) -> str:
         title = block['child_database'].get('title', '')
         return f"{indent}Child database: {title}\n\n"
 
     @staticmethod
-    def _handle_child_page(block: Dict, indent: str) -> str:
+    def _handle_child_page(block: dict, indent: str) -> str:
         title = block['child_page'].get('title', '')
         return f"{indent}Child page: {title}\n\n"
 
     @staticmethod
-    def _handle_bookmark(block: Dict, indent: str) -> str:
+    def _handle_bookmark(block: dict, indent: str) -> str:
         url = block['bookmark']['url']
         caption = _extract_rich_text(block['bookmark'].get('caption', []))
         return f"{indent}[{caption or 'Bookmark'}]({url})\n\n"
 
     @staticmethod
-    def _handle_image(block: Dict, indent: str) -> str:
+    def _handle_image(block: dict, indent: str) -> str:
         caption = _extract_rich_text(block['image'].get('caption', []))
         url = block['image']['file']['url'] if block['image']['type'] == 'file' else block['image']['external']['url']
         return f"{indent}![{caption}]({url})\n\n"
 
     @staticmethod
-    def _handle_divider(_block: Dict, indent: str) -> str:
+    def _handle_divider(_block: dict, indent: str) -> str:
         return f"{indent}---\n\n"
 
     @staticmethod
-    def _handle_breadcrumb(_block: Dict, indent: str) -> str:
+    def _handle_breadcrumb(_block: dict, indent: str) -> str:
         return f"{indent}[Breadcrumb]\n\n"
 
     @staticmethod
-    def _handle_column_list(_block: Dict, indent: str) -> str:
-        return f"{indent}[Column List Start]\n\n"
+    def _handle_column_list(_block: dict, indent: str) -> str:
+        return f"{indent}[Column list Start]\n\n"
 
     @staticmethod
-    def _handle_column(_block: Dict, indent: str) -> str:
+    def _handle_column(_block: dict, indent: str) -> str:
         return f"{indent}[Column Start]\n\n"
 
     @staticmethod
-    def _handle_embed(block: Dict, indent: str) -> str:
+    def _handle_embed(block: dict, indent: str) -> str:
         url = block['embed']['url']
         return f"{indent}[Embed: {url}]\n\n"
 
     @staticmethod
-    def _handle_equation(block: Dict, indent: str) -> str:
+    def _handle_equation(block: dict, indent: str) -> str:
         expression = block['equation']['expression']
         return f"{indent}$$\n{expression}\n$$\n\n"
 
     @staticmethod
-    def _handle_file(block: Dict, indent: str) -> str:
+    def _handle_file(block: dict, indent: str) -> str:
         file_info = block['file']
         caption = _extract_rich_text(file_info.get('caption', []))
         url = file_info[file_info['type']]['url']
@@ -293,24 +292,24 @@ class Notion2MarkdownParser:
         return f"{indent}[File: [{name or caption or 'File'}]({url}){' - ' + caption if caption else ''}]\n\n"
 
     @staticmethod
-    def _handle_link_preview(block: Dict, indent: str) -> str:
+    def _handle_link_preview(block: dict, indent: str) -> str:
         url = block['link_preview']['url']
         return f"{indent}[Link Preview: {url}]\n\n"
 
     @staticmethod
-    def _handle_link_to_page(block: Dict, indent: str) -> str:
+    def _handle_link_to_page(block: dict, indent: str) -> str:
         uuid = block['link_to_page'][block['link_to_page']['type']].replace('-', '')
         return f"{indent}[Link to page: {uuid}]\n\n"
 
     @staticmethod
-    def _handle_pdf(block: Dict, indent: str) -> str:
+    def _handle_pdf(block: dict, indent: str) -> str:
         pdf_info = block['pdf']
         caption = _extract_rich_text(pdf_info.get('caption', []))
         url = pdf_info[pdf_info['type']]['url']
         return f"{indent}[PDF]({url}){' - ' + caption if caption else ''}]\n\n"
 
     @staticmethod
-    def _handle_synced_block(block: Dict, indent: str) -> str:
+    def _handle_synced_block(block: dict, indent: str) -> str:
         if block['synced_block']['synced_from'] is None:
             return f"{indent}[Original Synced Block]\n\n"
         else:
@@ -318,7 +317,7 @@ class Notion2MarkdownParser:
             return f"{indent}[Synced Block: Original ID {original_block_id}]\n\n"
 
     @staticmethod
-    def _handle_table(block: Dict, indent: str) -> str:
+    def _handle_table(block: dict, indent: str) -> str:
         table_info = block['table']
         width = table_info['table_width']
         has_column_header = table_info['has_column_header']
@@ -326,22 +325,22 @@ class Notion2MarkdownParser:
         return f"{indent}[Table: {width} columns, Column Header: {has_column_header}, Row Header: {has_row_header}]\n\n"
 
     @staticmethod
-    def _handle_table_row(block: Dict, indent: str) -> str:
+    def _handle_table_row(block: dict, indent: str) -> str:
         cells = block['table_row']['cells']
         row_content = " | ".join([_extract_rich_text(cell) for cell in cells])
         return f"{indent}| {row_content} |\n"
 
     @staticmethod
-    def _handle_table_of_contents(_block: Dict, indent: str) -> str:
+    def _handle_table_of_contents(_block: dict, indent: str) -> str:
         return f"{indent}[Table of Contents]\n\n"
 
     @staticmethod
-    def _handle_template(block: Dict, indent: str) -> str:
+    def _handle_template(block: dict, indent: str) -> str:
         template_text = _extract_rich_text(block['template']['rich_text'])
         return f"{indent}[Template: {template_text}]\n\n"
 
     @staticmethod
-    def _handle_video(block: Dict, indent: str) -> str:
+    def _handle_video(block: dict, indent: str) -> str:
         video_info = block['video']
         caption = _extract_rich_text(video_info.get('caption', []))
         url = video_info[video_info['type']]['url']
@@ -350,7 +349,7 @@ class Notion2MarkdownParser:
     # Helper methods
 
 
-def _extract_rich_text(rich_text: List[Dict]) -> str:
+def _extract_rich_text(rich_text: list[dict]) -> str:
     text = ""
     for rt in rich_text:
         content = rt['plain_text']

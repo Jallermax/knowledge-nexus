@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Dict, List
+from typing import Optional
 
 from graph_rag.data_model.cacheable import Cacheable
 
@@ -33,7 +33,7 @@ class Chunk(Cacheable):
         return 1
 
     content: str
-    embedding: List[float]
+    embedding: list[float]
 
 
 @dataclass
@@ -45,7 +45,7 @@ class GraphPage(Cacheable):
     content: Optional[str] = None
     source: str = 'Notion'
     last_edited_time: Optional[str] = None
-    chunks: List[Chunk] = field(default_factory=list)
+    chunks: list[Chunk] = field(default_factory=list)
 
     @classmethod
     def get_class_version(cls) -> int:
@@ -66,5 +66,5 @@ class GraphRelation(Cacheable):
 
 @dataclass
 class ProcessedData:
-    pages: Dict[str, GraphPage]
-    relations: List[GraphRelation]
+    pages: dict[str, GraphPage]
+    relations: list[GraphRelation]

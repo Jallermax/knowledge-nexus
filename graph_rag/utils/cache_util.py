@@ -3,7 +3,7 @@ import json
 import os
 import time
 from datetime import timedelta
-from typing import Dict, Any, Type, List
+from typing import Any, Type
 
 from graph_rag.config.config_manager import Config
 from graph_rag.data_model.cacheable import Cacheable
@@ -26,12 +26,12 @@ def get_all_cacheable_classes():
 CACHEABLE_CLASSES = get_all_cacheable_classes()
 
 
-def save_cache(file_path: str, data: Dict[str, Any]):
+def save_cache(file_path: str, data: dict[str, Any]):
     with open(file_path, 'w') as f:
         json.dump(data, f, default=custom_serializer)
 
 
-def load_cache(file_path: str) -> Dict[str, Any]:
+def load_cache(file_path: str) -> dict[str, Any]:
     with open(file_path, 'r') as f:
         return json.load(f, object_hook=custom_deserializer)
 
@@ -93,41 +93,26 @@ def load_model_cache(file_name: str, model_class: Type[Cacheable], key: str) -> 
     return cache_entry['data']
 
 
-def show_saved_cache_info(file_name: str, show_data: bool = False):
-    file_path = os.path.join(config.CACHE_PATH, file_name)
-    cache_data = load_cache(file_path)
-
-    print(f"Cache file: {file_name}")
-    for k, entry in cache_data.items():
-        print(f"\nKey: {k}")
-        print(f"Version: {entry['version']}")
-        print(f"Save time: {time.ctime(entry['save_time'])}")
-        print(f"Data size: {len(entry['data'])}")
-        if show_data:
-            import json
-            print(json.dumps(entry['data'], indent=2))
-
-
-def save_prepared_pages_to_cache(root_page_id: str, prepared_pages: Dict[str, GraphPage],
+def save_prepared_pages_to_cache(root_page_id: str, prepared_pages: dict[str, GraphPage],
                                  file_name: str = 'prepared_pages.json'):
     save_model_cache(file_name,
                      {page_id: page.to_dict() for page_id, page in prepared_pages.items()}, GraphPage,
                      root_page_id)
 
 
-def load_prepared_pages_from_cache(root_page_id: str, file_name: str = 'prepared_pages.json') -> Dict[str, GraphPage]:
+def load_prepared_pages_from_cache(root_page_id: str, file_name: str = 'prepared_pages.json') -> dict[str, GraphPage]:
     prepared_pages_cache = load_model_cache(file_name, GraphPage, root_page_id)
     return {page_id: GraphPage.from_dict(page_data) for page_id, page_data
             in prepared_pages_cache.items()}
 
 
-def save_page_relations_to_cache(root_page_id: str, page_relations: List[GraphRelation],
+def save_page_relations_to_cache(root_page_id: str, page_relations: list[GraphRelation],
                                  file_name: str = 'page_relations.json'):
     save_model_cache(file_name,
                      [relation.to_dict() for relation in page_relations], GraphRelation, root_page_id)
 
 
-def load_page_relations_from_cache(root_page_id: str, file_name: str = 'page_relations.json') -> List[GraphRelation]:
+def load_page_relations_from_cache(root_page_id: str, file_name: str = 'page_relations.json') -> list[GraphRelation]:
     page_relations_cache = load_model_cache(file_name, GraphRelation, root_page_id)
     return [GraphRelation.from_dict(relation_data) for relation_data
             in page_relations_cache]

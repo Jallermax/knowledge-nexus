@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import List
 
 import tiktoken
 from langchain_openai import OpenAIEmbeddings
@@ -38,7 +37,7 @@ class ChunkCreator:
         self.chunk_overlap = chunk_overlap
         self.token_counter = token_counter
 
-    def create_chunks(self, page: GraphPage) -> List[str]:
+    def create_chunks(self, page: GraphPage) -> list[str]:
         constant_part = self._create_constant_part(page)
         constant_token_count = self.token_counter.count(constant_part)
         available_tokens = self.chunk_size - constant_token_count

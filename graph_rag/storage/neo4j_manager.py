@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 
@@ -87,7 +86,7 @@ class Neo4jManager:
         )
         self.graph.query(query, {'page_id': page_id})
 
-    def create_chunk_nodes(self, page_id: str, chunks: List[Chunk]):
+    def create_chunk_nodes(self, page_id: str, chunks: list[Chunk]):
         for i, chunk in enumerate(chunks):
             query = (
                 "MATCH (p) WHERE p.id = $page_id "

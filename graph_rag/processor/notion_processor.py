@@ -2,7 +2,6 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Dict, List
 
 from graph_rag.config.config_manager import Config
 from graph_rag.data_model.graph_data_classes import GraphPage, get_page_type_from_string, GraphRelation, RelationType, \
@@ -41,7 +40,7 @@ def _extract_title(page_content: dict):
         return 'Untitled'
 
 
-def _extract_rich_text(rich_text: List[dict]):
+def _extract_rich_text(rich_text: list[dict]):
     return ''.join([text['plain_text'] for text in rich_text])
 
 
@@ -58,8 +57,8 @@ class NotionProcessor(ContentProvider):
         self.notion_api = NotionAPI()
         self.config = Config()
         self.content_parser = Notion2MarkdownParser()
-        self.prepared_pages: Dict[str, GraphPage] = {}
-        self.page_relations: List[GraphRelation] = []
+        self.prepared_pages: dict[str, GraphPage] = {}
+        self.page_relations: list[GraphRelation] = []
         os.makedirs(self.config.CACHE_PATH, exist_ok=True)
         logger.info("NotionProcessor initialized")
 

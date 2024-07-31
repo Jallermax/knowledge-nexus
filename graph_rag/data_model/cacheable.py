@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict, fields, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from enum import Enum
-from typing import Type, TypeVar, Dict, Any, get_args, get_origin, Union
+from typing import Type, TypeVar, Any, get_args, get_origin, Union
 
 T = TypeVar('T', bound='Cacheable')
 
@@ -9,7 +9,7 @@ T = TypeVar('T', bound='Cacheable')
 @dataclass
 class Cacheable(ABC):
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = {}
         for field in fields(self):
             value = getattr(self, field.name)
@@ -26,11 +26,11 @@ class Cacheable(ABC):
         return data
 
     @classmethod
-    def from_dict(cls: Type[T], data: Dict[str, Any]) -> T:
+    def from_dict(cls: Type[T], data: dict[str, Any]) -> T:
         if data['version'] != cls.get_class_version():
             raise ValueError(f"Model version mismatch: expected {cls.get_class_version()}, got {data['version']}")
 
-        init_args: Dict[str, Any] = {}
+        init_args: dict[str, Any] = {}
         for field in fields(cls):
             field_type = field.type
             if field.name not in data:
