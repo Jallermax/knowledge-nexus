@@ -4,8 +4,6 @@ from graph_rag.config.config_manager import Config
 from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation, PageType, ProcessedData
 from graph_rag.data_source.base_content_provider import ContentProvider
 from graph_rag.processor.base_processor import Processor
-from graph_rag.processor.entity_extractor import EntityExtractor
-from graph_rag.processor.notion_processor import NotionProcessor
 from graph_rag.storage.neo4j_manager import Neo4jManager
 from graph_rag.utils.logging import LoggingProgressBar, ProgressBarHandler
 
@@ -15,32 +13,9 @@ logger = logging.getLogger(__name__)
 class DataProcessingPipeline:
     def __init__(self):
         self.config = Config()
-        self.notion_processor = NotionProcessor()
-        self.entity_extractor = EntityExtractor()
         self.neo4j_manager = Neo4jManager()
-
-    def process_notion_page(self, page_id):
-        # Process the Notion page
-        self.notion_processor.process_pages(page_id)
-        prepared_pages = self.notion_processor.prepared_pages
-        logger.info(f"Prepared {len(prepared_pages)} pages from Notion")
-        relations = self.notion_processor.page_relations
-        logger.info(f"Prepared {len(relations)} relations from Notion")
-
-        for page in prepared_pages.values():
-            self.neo4j_manager.create_page_node(page)
-
-        # TODO check existing pages not only in prepared_pages, but in neo4j as well
-
-        if self.config.NOTION_CREATE_UNPROCESSED_NODES:
-            self.add_missing_pages(prepared_pages, relations)
-        else:
-            relations = self.clean_orphan_relations(prepared_pages, relations)
         self.data_sources: list[ContentProvider] = []
         self.processors: list[Processor] = []
-
-
-        logger.info("Notion structure has been parsed and stored in Neo4j.")
 
     def add_missing_pages(self, prepared_pages: dict[str, GraphPage], relations: list[GraphRelation]):
         logger.info("Adding unprocessed pages from relations to prepared_pages")
@@ -92,17 +67,22 @@ class DataProcessingPipeline:
             processor.process(processed_data)
 
         # Step 3: Save data to Neo4j graph
+        self.neo4j_manager.create_vector_index()
+
         self.create_processed_page_nodes([p for p in processed_data.pages.values()])
 
-        if self.config.NOTION_CREATE_UNPROCESSED_NODES:
-            self.add_missing_pages(processed_data.pages, processed_data.relations)
-        else:
-            processed_data.relations = self.clean_orphan_relations(processed_data.pages, processed_data.relations)
+        self.handle_orphan_relations(processed_data)
 
         for relation in processed_data.relations:
             self.neo4j_manager.link_entities(relation)
 
         logger.info("Notion structure has been parsed and stored in Neo4j.")
+
+    def handle_orphan_relations(self, processed_data: ProcessedData):
+        if self.config.NOTION_CREATE_UNPROCESSED_NODES:
+            self.add_missing_pages(processed_data.pages, processed_data.relations)
+        else:
+            processed_data.relations = self.clean_orphan_relations(processed_data.pages, processed_data.relations)
 
     def create_processed_page_nodes(self, processed_pages: list[GraphPage]) -> None:
         progress_bar = LoggingProgressBar(len(processed_pages), prefix='Processing:',

@@ -65,10 +65,8 @@ class NotionProcessor(ContentProvider):
     def fetch_data(self) -> ProcessedData:
         self.process_pages(self.config.NOTION_ROOT_PAGE_ID)
 
-        prepared_pages = self.prepared_pages
-        logger.info(f"Prepared {len(prepared_pages)} pages from Notion")
-        relations = self.page_relations
-        logger.info(f"Prepared {len(relations)} relations from Notion")
+        logger.info(f"Prepared {len(self.prepared_pages)} pages from Notion")
+        logger.info(f"Prepared {len(self.page_relations)} relations from Notion")
 
         return ProcessedData(self.prepared_pages, self.page_relations)
 
