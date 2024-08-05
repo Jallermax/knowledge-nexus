@@ -1,7 +1,7 @@
 requests~=2.32.3
 beautifulsoup4~=4.12.3
 neo4j
-langchain~=0.2.11
+langchain~=0.2.12
 langchain-community~=0.2.10
 langchain-core~=0.2.9
 langchain-openai~=0.1.9
