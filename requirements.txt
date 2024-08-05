@@ -4,7 +4,7 @@ neo4j
 langchain~=0.2.11
 langchain-community~=0.2.10
 langchain-core~=0.2.9
-langchain-openai~=0.1.9
+langchain-openai~=0.1.20
 langchain-text-splitters~=0.2.2
 py2neo~=2021.2.4
 pyaml-env~=1.2.1
