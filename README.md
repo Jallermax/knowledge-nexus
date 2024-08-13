@@ -1,11 +1,12 @@
 # Knowledge Nexus: Your AI-Powered Personal Knowledge Discovery Engine
+[![CI](https://github.com/Jallermax/knowledge-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Jallermax/knowledge-nexus/actions/workflows/ci.yml)
 
 ## 🛠 Getting Started
 
 1. install neo4j
 2. install python
-3. make and configure .env in root directory
-4. adjust options in config/config.yaml if necessary
+3. make and configure `.env` in root directory
+4. adjust options in `config/config.yaml` if necessary
 5. `pip install -r requirements.txt`
 6. `python main.py`
 
