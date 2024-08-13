@@ -92,8 +92,3 @@ def process_pages(total_pages):
 
     # Remove the custom handler
     logger.removeHandler(handler)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
-    process_pages(100)

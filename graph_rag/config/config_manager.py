@@ -1,6 +1,6 @@
+from pathlib import Path
 from typing import Any
 
-import yaml
 from dotenv import load_dotenv
 from pyaml_env import parse_config
 
@@ -10,7 +10,8 @@ class Config:
         load_dotenv()  # Load environment variables from .env file
 
         # Load configuration from config.yaml
-        config_data: dict[str, Any] = parse_config('config/config.yaml', tag=None, default_value='')
+        config_path = str(Path(__file__).parent.parent.parent / 'config' / 'config.yaml')
+        config_data: dict[str, Any] = parse_config(config_path, tag=None, default_value='')
 
         # Notion API configuration
         notion_config = config_data['notion_api']
@@ -74,11 +75,3 @@ class Config:
         for k in keys:
             value = value.get(k, {})
         return value if value != {} else default
-
-
-# Usage example:
-if __name__ == "__main__":
-    config = Config()
-    print(f"Notion API Base URL: {config.NOTION_API_BASE_URL}")
-    print(f"LLM Model: {config.LLM_MODEL}")
-    print(f"Neo4j Host: {config.NEO4J_URI}")

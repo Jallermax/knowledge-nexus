@@ -146,7 +146,6 @@ class NotionProcessor(ContentProvider):
 
         return content
 
-
     def save_relation_and_process_page(self, parent_id: str, rel_type: RelationType, page_id: str,
                                        rel_context: str = None,
                                        is_database: bool = None, page_info: dict = None, recursive_depth: int = 0):
