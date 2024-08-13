@@ -1,94 +1,124 @@
 import unittest
+from unittest.mock import patch, MagicMock
 
-from graph_rag.processor.content_chnker_and_embedder import ChunkCreator
-
-
-class MockTokenCounter:
-    def __init__(self, token_counts=None):
-        self.token_counts = token_counts or {}
-
-    def count(self, text):
-        if self.token_counts:
-            return sum(self.token_counts.get(word, 1) for word in text.split())
-        else:
-            return len(text.split())  # Simple word-based counting for Unicode tests
+from graph_rag.data_model.graph_data_classes import PageType, GraphPage
+from graph_rag.processor.content_chunker_and_embedder import ChunkCreator, TokenCounter, TextCleaner
 
 
-class TestFindChunkEnd(unittest.TestCase):
+class TestTextCleaner(unittest.TestCase):
+    def test_clean_markdown(self):
+        cleaner = TextCleaner()
+        input_text = "# Heading\nThis is a **test**!"
+        expected_output = "Heading. This is a test!"
+        self.assertEqual(cleaner.clean_markdown(input_text), expected_output)
+
+
+class TestTokenCounter(unittest.TestCase):
+    @patch('tiktoken.encoding_for_model')
+    def test_token_counter_initialization_valid_model(self, mock_encoding):
+        mock_encoder = MagicMock()
+        mock_encoding.return_value = mock_encoder
+        counter = TokenCounter("gpt-3.5-turbo")
+        self.assertEqual(counter.encoder, mock_encoder)
+
+    @patch('tiktoken.get_encoding')
+    @patch('tiktoken.encoding_for_model', side_effect=KeyError)
+    def test_token_counter_initialization_invalid_model(self, mock_encoding, mock_get_encoding):
+        mock_encoder = MagicMock()
+        mock_get_encoding.return_value = mock_encoder
+        counter = TokenCounter("unknown-model")
+        self.assertEqual(counter.encoder, mock_encoder)
+        mock_get_encoding.assert_called_once_with("cl100k_base")
+
+    @patch('tiktoken.encoding_for_model')
+    def test_count(self, mock_encoding):
+        mock_encoder = MagicMock()
+        mock_encoder.encode.return_value = ['token1', 'token2', 'token3']
+        mock_encoding.return_value = mock_encoder
+        counter = TokenCounter("gpt-3.5-turbo")
+        result = counter.count("Some text")
+        self.assertEqual(result, 3)
+
+
+class TestChunkCreator(unittest.TestCase):
     def setUp(self):
-        self.default_token_counter = MockTokenCounter({"word": 1, "longer": 2, "longest": 3})
-        self.default_chunk_creator = ChunkCreator(chunk_size=10, chunk_overlap=2,
-                                                  token_counter=self.default_token_counter)
+        self.token_counter = MagicMock()
+        self.token_counter.count.side_effect = lambda text: len(text.split())
+        self.chunk_creator = ChunkCreator(chunk_size=12, chunk_overlap=2, token_counter=self.token_counter)
 
-    def test_find_chunk_end_exact_fit(self):
-        content = "word word word word word word word word word word"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 10)
-        self.assertEqual(end, len(content))
+    def test_create_chunks(self):
+        mock_encoder = MagicMock()
+        mock_encoder.encode.side_effect = lambda text, disallowed_special=None: text.split()
+        mock_encoder.decode.side_effect = lambda tokens: ' '.join(tokens)
+        self.token_counter.encoder = mock_encoder
 
-    def test_find_chunk_end_partial_fit(self):
-        content = "word word word word word word word word word word longer"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 10)
-        self.assertEqual(end, content.rindex("word") + 4)  # +4 to include the last "word"
+        page = GraphPage(id="1", title="Test Page", type=PageType.PAGE, content="This is a test content.",
+                         last_edited_time="2024-01-01", url="")
+        result = self.chunk_creator.create_chunks(page)
+        print(f"THIS IS RESULT: {result=}")
+        expected_chunks = ['Title: Test Page\nLast edited time: 2024-01-01\n\nContent:\nThis is a test',
+                           'Title: Test Page\nLast edited time: 2024-01-01\n\nContent:\na test content.']
+        self.assertEqual(2, len(result))
+        self.assertEqual(expected_chunks, result)
 
-    def test_find_chunk_end_single_long_word(self):
-        content = "longest"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 2)
-        self.assertEqual(end, len(content))
-
-    def test_find_chunk_end_mixed_lengths(self):
-        content = "word longer longest word longer word"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 8)
-        self.assertEqual(end, content.index("longest"))
-
-    def test_find_chunk_end_start_mid_content(self):
-        content = "word word word word longer longest word word"
-        start = content.index("longer")
-        end = self.default_chunk_creator._find_chunk_end(content, start, 5)
-        self.assertEqual(end, content.index("word", start + 6))
-
-    def test_find_chunk_end_available_tokens_zero(self):
-        content = "word word word"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 0)
-        self.assertEqual(end, 0)
-
-    def test_find_chunk_end_empty_content(self):
+    def test_create_text_chunks_empty_content(self):
         content = ""
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 10)
-        self.assertEqual(end, 0)
+        result = self.chunk_creator.create_text_chunks(content, available_tokens=5)
+        self.assertEqual(result, [])
 
-    def test_find_chunk_end_unicode(self):
-        unicode_token_counter = MockTokenCounter()
-        unicode_chunk_creator = ChunkCreator(chunk_size=5, chunk_overlap=1, token_counter=unicode_token_counter)
-        content = "Hello 你好 नमस्ते こんにちは"  # Mix of English, Chinese, Hindi, and Japanese
-        end = unicode_chunk_creator._find_chunk_end(content, 0, 5)
-        self.assertEqual(end, content.index("नमस्ते"))
+    def test_create_text_chunks_single_token(self):
+        content = "Token"
+        result = self.chunk_creator.create_text_chunks(content, available_tokens=5)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], "Token")
 
-    def test_find_chunk_end_with_punctuation(self):
-        content = "Hello, world! How are you? I'm fine."
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 5)
-        self.assertEqual(end, content.index("How"))
+    def test_create_text_chunks_exact_chunk_size(self):
+        content = "This is exact size."
+        result = self.chunk_creator.create_text_chunks(content, available_tokens=4)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], "This is exact size.")
 
-    def test_find_chunk_end_with_numbers(self):
-        number_token_counter = MockTokenCounter({"1": 1, "10": 1, "100": 1, "word": 1})
-        number_chunk_creator = ChunkCreator(chunk_size=5, chunk_overlap=1, token_counter=number_token_counter)
-        content = "1 10 100 word word"
-        end = number_chunk_creator._find_chunk_end(content, 0, 4)
-        self.assertEqual(end, content.rindex("100") + 3)
+    def test_create_text_chunks_large_content(self):
+        content = "This is a test content for chunking. Here we explore bigger sentence that consists of multiple chunks."
+        result = self.chunk_creator.create_text_chunks(content, available_tokens=5)
+        self.assertEqual(len(result), 3)
+        self.assertEqual("This is a test content f", result[0])
+        self.assertEqual(" for chunking. Here we explore bigger s", result[1])
+        self.assertEqual(" sentence that consists of multiple chunks.", result[2])
 
-    def test_find_chunk_end_with_newlines(self):
-        content = "line1\nline2\nline3\nline4\nline5"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 3)
-        self.assertEqual(end, content.index("line4"))
+    def test_create_text_chunks(self):
+        content = ("This is a test content for chunking. Here we explore bigger sentence that consists of multiple "
+                   "chunks.")
+        result = self.chunk_creator.create_text_chunks(content, available_tokens=5)
+        self.assertEqual(3, len(result))
+        self.assertEqual("This is a test content f", result[0])
+        self.assertEqual(" for chunking. Here we explore bigger s", result[1])
+        self.assertEqual(" sentence that consists of multiple chunks.", result[2])
 
-    def test_find_chunk_end_exact_token_count(self):
-        content = "word word word word word"
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 5)
-        self.assertEqual(end, len(content))
+    @patch('tiktoken.encoding_for_model')
+    def test_create_sentence_aware_chunks(self, mock_encoding):
+        mock_encoder = MagicMock()
+        mock_encoder.encode.side_effect = lambda text, disallowed_special=None: text.split()
+        mock_encoder.decode.side_effect = lambda tokens: ' '.join(tokens)
+        self.token_counter.encoder = mock_encoder
 
-    def test_find_chunk_end_large_content(self):
-        content = "word " * 1000
-        end = self.default_chunk_creator._find_chunk_end(content, 0, 100)
-        self.assertEqual(end, 500)  # 100 words, each followed by a space (except the last one)
+        content = "This is a sentence. This is another one!"
+        result = self.chunk_creator.create_sentence_aware_chunks(content, available_tokens=6)
+
+        expected_chunks = ["This is a sentence.", "a sentence. This is another one!"]
+        self.assertEqual(expected_chunks, result)
+
+    def test_create_sentence_aware_chunks_no_punctuation(self):
+        mock_encoder = MagicMock()
+        mock_encoder.encode.side_effect = lambda text, disallowed_special=None: text.split()
+        mock_encoder.decode.side_effect = lambda tokens: ' '.join(tokens)
+        self.token_counter.encoder = mock_encoder
+        content = ("This is an example of a very long sentence that does not contain any punctuation marks "
+                   "and is intended for testing purposes")
+        result = self.chunk_creator.create_sentence_aware_chunks(content, available_tokens=10)
+        self.assertEqual(["This is an example of a very long sentence that",
+                          "sentence that does not contain any punctuation marks and is",
+                          "and is intended for testing purposes"], result)
 
 
 if __name__ == '__main__':

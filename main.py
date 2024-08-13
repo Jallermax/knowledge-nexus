@@ -3,7 +3,7 @@ import logging
 import dotenv
 
 from graph_rag.pipeline.data_processing_pipeline import DataProcessingPipeline
-from graph_rag.processor.content_chnker_and_embedder import ContentChunkerAndEmbedder
+from graph_rag.processor.content_chunker_and_embedder import ContentChunkerAndEmbedder
 from graph_rag.processor.notion_processor import NotionProcessor
 from graph_rag.storage.neo4j_manager import Neo4jManager
 

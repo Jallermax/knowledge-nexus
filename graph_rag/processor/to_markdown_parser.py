@@ -216,7 +216,7 @@ class Notion2MarkdownParser:
     @staticmethod
     def _handle_toggle(block: dict, indent: str) -> str:
         summary = _extract_rich_text(block['toggle']['rich_text'])
-        return f"{indent}<details>\n{indent}<summary>{summary}</summary>\n\n"
+        return f"{indent}<details>\n{indent}<summary>{summary}</summary>\n{indent}<details>\n\n"
 
     @staticmethod
     def _handle_code(block: dict, indent: str) -> str:

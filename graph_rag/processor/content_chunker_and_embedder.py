@@ -29,10 +29,15 @@ class TextCleaner:
 
 class TokenCounter:
     def __init__(self, model_name: str):
-        self.encoder = tiktoken.encoding_for_model(model_name=model_name)
+        try:
+            encoder = tiktoken.encoding_for_model(model_name=model_name)
+        except KeyError:
+            logger.warning(f"Model {model_name} not found in tiktoken. Using cl100k_base instead.")
+            encoder = tiktoken.get_encoding("cl100k_base")
+        self.encoder = encoder
 
     def count(self, text: str) -> int:
-        return len(self.encoder.encode(text))
+        return len(self.encoder.encode(text, disallowed_special=()))
 
 
 class ChunkCreator:
@@ -42,34 +47,31 @@ class ChunkCreator:
         self.token_counter = token_counter
 
     def create_chunks(self, page: GraphPage) -> list[str]:
-        constant_part = self._create_constant_part(page)
+        constant_part = self._create_constant_part_for_content(page)  # TODO limit so it wouldn't exceed max chunk size
         constant_token_count = self.token_counter.count(constant_part)
         available_tokens = self.chunk_size - constant_token_count
 
+        content_chunks = self.create_sentence_aware_chunks(page.content, available_tokens)
+
+        if content_chunks:
+            return [f"{constant_part}{chunk}" for chunk in content_chunks]
+        else:
+            # If no chunks were created, create a single chunk with page metadata
+            return [self._create_constant_part(page)]
+
+    def create_text_chunks(self, content: str, available_tokens: int) -> list[str]:
         chunks = []
         start = 0
-        while page.content and start < len(page.content):
-            chunk_end = self._find_chunk_end(page.content, start, available_tokens)
-            chunk = page.content[start:chunk_end]
-            full_chunk_text = constant_part + chunk
-            chunks.append(full_chunk_text)
+        while content and start < len(content):
+            chunk_end = self._find_chunk_end(content, start, available_tokens)
+            chunk = content[start:chunk_end]
+            chunks.append(chunk)
 
-            if chunk_end == len(page.content):
+            if chunk_end == len(content):
                 break
 
             start = max(chunk_end - self.chunk_overlap, start + 1)
-
-        # If no chunks were created (i.e., the content was shorter than available_tokens),
-        # create a single chunk with all the content
-        if not chunks:
-            embedded_part = f"{constant_part if constant_part else ''}{page.content if page.content else ''}"
-            chunks.append(embedded_part)
-
         return chunks
-
-    @staticmethod
-    def _create_constant_part(page: GraphPage) -> str:
-        return f"Title: {page.title}\nLast edited time: {page.last_edited_time}\n\nContent:\n"
 
     def _find_chunk_end(self, content: str, start: int, available_tokens: int) -> int:
         """Find the largest chunk that fits within the token limit."""
@@ -84,6 +86,47 @@ class ChunkCreator:
             else:
                 end = mid - 1
         return start
+
+    def create_sentence_aware_chunks(self, content: str, available_tokens: int) -> list[str]:
+        overlap = self.chunk_overlap
+        if available_tokens <= overlap:
+            logger.warning(f"Chunk overlap {overlap} is greater than max content chunk size {available_tokens}. "
+                           f"Skipping overlap.")
+            overlap = 0
+        chunks = []
+        tokens = self.token_counter.encoder.encode(content, disallowed_special=())
+
+        while tokens:
+            chunk = tokens[:available_tokens]
+            chunk_text = self.token_counter.encoder.decode(chunk)
+            last_punctuation = max(
+                chunk_text.rfind("."),
+                chunk_text.rfind("?"),
+                chunk_text.rfind("!"),
+                chunk_text.rfind("\n"),
+            )
+            if last_punctuation != -1:
+                chunk_text = chunk_text[: last_punctuation + 1]
+
+            if chunk_text and (not chunk_text.isspace()):
+                chunks.append(chunk_text)
+
+            chunk_size = self.token_counter.count(chunk_text)
+            if chunk_size >= len(tokens):
+                break
+
+            skip_tokens = chunk_size - overlap
+            tokens = tokens[skip_tokens:]
+
+        return chunks
+
+    @staticmethod
+    def _create_constant_part_for_content(page: GraphPage) -> str:
+        return f"{ChunkCreator._create_constant_part(page)}\nContent:\n"
+
+    @staticmethod
+    def _create_constant_part(page: GraphPage) -> str:
+        return f"Title: {page.title}\nLast edited time: {page.last_edited_time}\n"
 
 
 class ContentChunkerAndEmbedder(Processor):
