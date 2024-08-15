@@ -31,7 +31,7 @@ jobs:
       - name: Run linter
         run: |
           pip install flake8
-          flake8 --extend-ignore E501,W291 graph_rag --exit-zero
+          flake8 --per-file-ignores=neo4j_manager.py:W291 --max-line-length=140 --count --statistics --exit-zero ./graph_rag
 
       - name: Run tests
         run: |
