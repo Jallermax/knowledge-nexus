@@ -16,7 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_notion_uuid(href):
-    pattern = r"(https:\/\/www\.notion\.so)?/([a-zA-Z0-9\-]+/)?([a-zA-Z0-9\-]+-)?([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})(\?[a-zA-Z0-9%=\-&]*)?"
+    """ Extract and normalize UUID from notion URL.
+    Example: https://www.notion.so/username/Some-Page-bf98f999-c90a-41e1-98f9-99c90a01e1d2
+    or https://www.notion.so/bf98f999c90a41e198f999c90a01e1d2
+    both return bf98f999c90a41e198f999c90a01e1d2 """
+    pattern = re.compile("(https://www.notion.so)?"  # Notion host
+                         "/([a-zA-Z0-9-]+/)?"  # Username
+                         "([a-zA-Z0-9-]+-)?"  # Page name
+                         "([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})"  # UUID
+                         "(\\?[a-zA-Z0-9%=\\-&]*)?")  # Query parameters
     match = re.match(pattern, href)
     if match:
         return match.group(4).replace('-', '')  # return the UUID
@@ -164,7 +172,7 @@ class NotionProcessor(ContentProvider):
     def recursive_process_block(self, block: dict, parent_id: str, indent_level: int = 0,
                                 recursive_depth: int = 0) -> str:
         logger.debug(f"[Depth={recursive_depth}] Recursively parsing block: {block['id']}, parent_id: {parent_id}")
-        unsupported_block_types = [
+        unsupported_block_types = [  # noqa: F841
             'breadcrumb',
             'column',  # retrieve block children for content
             'column_list',  # retrieve block children for columns
@@ -245,11 +253,13 @@ class NotionProcessor(ContentProvider):
 
         return content
 
-    def process_rich_text_array(self, rich_text_array: list, parent_id: str, recursive_depth: int, rel_context: str = None):
+    def process_rich_text_array(self, rich_text_array: list, parent_id: str, recursive_depth: int,
+                                rel_context: str = None):
         for text in rich_text_array:
             if 'href' in text and text['href']:
                 uuid = _extract_notion_uuid(text['href'])
-                full_context = f"{rel_context}\n{_extract_rich_text(rich_text_array)}" if rel_context else _extract_rich_text(rich_text_array)
+                rich_text = _extract_rich_text(rich_text_array)
+                full_context = f"{rel_context}\n{rich_text}" if rel_context else rich_text
                 if uuid:
                     self.save_relation_and_process_page(
                         parent_id=parent_id,
@@ -270,7 +280,7 @@ class NotionProcessor(ContentProvider):
         if url not in self.prepared_pages.keys():
             try:
                 title, description = get_info_from_url(url)
-            except:
+            except Exception:
                 title, description = '', ''
             bookmark_page = GraphPage(url, title, PageType.BOOKMARK, url, content=description, source='Web')
             logger.info(f"[Depth={recursive_depth}] Adding new processed bookmark[{len(self.prepared_pages)}]: [{title}]({url})")
@@ -288,12 +298,15 @@ class NotionProcessor(ContentProvider):
                 else:
                     page_info = self.notion_api.get_page_metadata(page_id)
             except Exception as e:
-                logger.error(f"[Depth={recursive_depth}] Failed to get {'database' if is_database else 'page'} info for id: {page_id}: {e}")
+                logger.error(f"[Depth={recursive_depth}] Failed to get {'database' if is_database else 'page'} info "
+                             f"for id: {page_id}: {e}")
                 logger.debug(f"Stack_trace for {page_id} exception", stack_info=True, stacklevel=15)
                 return
 
         # Stop processing if page already exists in prepared_pages and wasn't updated
-        if page_id in self.prepared_pages.keys() and not first_time_after_second(page_info['last_edited_time'], self.prepared_pages[page_id].last_edited_time):
+        if (page_id in self.prepared_pages.keys()
+                and not first_time_after_second(page_info['last_edited_time'],
+                                                self.prepared_pages[page_id].last_edited_time)):
             return
 
         # TODO don't save page only if already exists in neo4j and last_edited_time is not greater than in neo4j
@@ -313,7 +326,7 @@ class NotionProcessor(ContentProvider):
         page.content = self.recursive_process_page_content(page_info, recursive_depth=recursive_depth)
 
     def recursive_process_page_properties(self, page_info: dict, recursive_depth: int = 0):
-        unsupported_properties = [
+        unsupported_properties = [  # noqa: F841
             'checkbox',
             'created_by',
             'created_time',

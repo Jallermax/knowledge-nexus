@@ -175,5 +175,5 @@ class NotionAPI:
     def get_root_page_info(self, root_id):
         try:
             return self.get_database_metadata(root_id)
-        except:
+        except Exception:
             return self.get_page_metadata(root_id)

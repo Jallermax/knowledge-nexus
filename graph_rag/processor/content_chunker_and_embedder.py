@@ -154,7 +154,7 @@ class ContentChunkerAndEmbedder(Processor):
                 processed_content.pages = cache_util.load_prepared_pages_from_cache(root_page_id, CACHE_FILE_NAME)
                 logger.info("Chunked pages loaded from cache")
                 return
-            except:
+            except Exception:
                 logger.warning("No cache found for chunked pages. Processing from scratch.")
 
         progress_bar = LoggingProgressBar(len(processed_content.pages), prefix='Processing:',
