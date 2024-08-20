@@ -3,13 +3,13 @@ import os
 import re
 from datetime import datetime
 
-from graph_rag.config.config_manager import Config
+from graph_rag.config import Config
 from graph_rag.data_model.graph_data_classes import GraphPage, get_page_type_from_string, GraphRelation, RelationType, \
     PageType, ProcessedData
-from graph_rag.data_source.base_content_provider import ContentProvider
+from graph_rag.data_source import ContentProvider
 from graph_rag.data_source.notion_api import NotionAPI
 from graph_rag.data_source.web_scraper import get_info_from_url
-from graph_rag.processor.to_markdown_parser import Notion2MarkdownParser
+from graph_rag.data_source.to_markdown_parser import Notion2MarkdownParser
 from graph_rag.utils import cache_util
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ def first_time_after_second(first_time: str, second_time: str):
     return dt1 > dt2
 
 
-class NotionProcessor(ContentProvider):
+class NotionProvider(ContentProvider):
     def __init__(self):
         super().__init__()
         self.notion_api = NotionAPI()
@@ -68,9 +68,8 @@ class NotionProcessor(ContentProvider):
         self.prepared_pages: dict[str, GraphPage] = {}
         self.page_relations: list[GraphRelation] = []
         os.makedirs(self.config.CACHE_PATH, exist_ok=True)
-        logger.info("NotionProcessor initialized")
 
-    def fetch_data(self) -> ProcessedData:
+    def _fetch_data(self) -> ProcessedData:
         self.process_pages(self.config.NOTION_ROOT_PAGE_ID)
 
         logger.info(f"Prepared {len(self.prepared_pages)} pages from Notion")

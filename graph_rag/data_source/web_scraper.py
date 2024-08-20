@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 
-from graph_rag.config.config_manager import Config
+from graph_rag.config import Config
 
 config = Config()
 

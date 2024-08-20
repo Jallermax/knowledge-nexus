@@ -2,8 +2,8 @@ import logging
 
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 
-from graph_rag.config.config_manager import Config
-from graph_rag.data_model.graph_data_classes import GraphRelation, GraphPage, Chunk, PageType, RelationType
+from graph_rag.config import Config
+from graph_rag.data_model import GraphRelation, GraphPage, Chunk, PageType, RelationType
 
 logger = logging.getLogger(__name__)
 

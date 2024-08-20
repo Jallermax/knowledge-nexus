@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from graph_rag.data_model.cacheable import Cacheable
+from graph_rag.data_model import Cacheable
 
 
 class RelationType(Enum):

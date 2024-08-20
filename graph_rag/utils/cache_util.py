@@ -5,9 +5,9 @@ import time
 from datetime import timedelta
 from typing import Any, Type
 
-from graph_rag.config.config_manager import Config
-from graph_rag.data_model.cacheable import Cacheable
-from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation
+from graph_rag.config import Config
+from graph_rag.data_model import Cacheable
+from graph_rag.data_model import GraphPage, GraphRelation
 
 config = Config()
 

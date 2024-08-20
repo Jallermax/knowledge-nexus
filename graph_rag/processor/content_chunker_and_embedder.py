@@ -4,8 +4,8 @@ import re
 import tiktoken
 from langchain_openai import OpenAIEmbeddings
 
-from graph_rag.data_model.graph_data_classes import GraphPage, ProcessedData, Chunk, PageType
-from graph_rag.processor.base_processor import Processor
+from graph_rag.data_model import GraphPage, ProcessedData, Chunk, PageType
+from graph_rag.processor import Processor
 from graph_rag.utils import cache_util
 from graph_rag.utils.logging import LoggingProgressBar, ProgressBarHandler
 
@@ -146,7 +146,7 @@ class ContentChunkerAndEmbedder(Processor):
         )
         self.text_cleaner = TextCleaner()
 
-    def process(self, processed_content: ProcessedData):
+    def _process(self, processed_content: ProcessedData):
         logger.info("Processing content chunks and embeddings")
         if self.config.CACHE_ENABLED:
             root_page_id = self.config.NOTION_ROOT_PAGE_ID

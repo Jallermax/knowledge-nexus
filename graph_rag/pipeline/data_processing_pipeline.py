@@ -1,10 +1,10 @@
 import logging
 
-from graph_rag.config.config_manager import Config
-from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation, PageType, ProcessedData
-from graph_rag.data_source.base_content_provider import ContentProvider
-from graph_rag.processor.base_processor import Processor
-from graph_rag.storage.neo4j_manager import Neo4jManager
+from graph_rag.config import Config
+from graph_rag.data_model import GraphPage, GraphRelation, PageType, ProcessedData
+from graph_rag.data_source import ContentProvider
+from graph_rag.processor import Processor
+from graph_rag.storage import Neo4jManager
 from graph_rag.utils.logging import LoggingProgressBar, ProgressBarHandler
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class DataProcessingPipeline:
 
         # Step 2: Run all processors
         for processor in self.processors:
-            processor.process(processed_data)
+            processor.process_data(processed_data)
 
         # Step 3: Save data to Neo4j graph
         self.neo4j_manager.create_vector_index()

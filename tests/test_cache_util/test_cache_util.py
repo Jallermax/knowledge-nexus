@@ -12,10 +12,10 @@ class MockConfig:
         self.CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
-with patch('graph_rag.config.config_manager.Config', MockConfig):
+with patch('graph_rag.config.Config', MockConfig):
     from graph_rag.utils import cache_util
-    from graph_rag.data_model.cacheable import Cacheable
-    from graph_rag.data_model.graph_data_classes import GraphPage, GraphRelation, PageType
+    from graph_rag.data_model import Cacheable
+    from graph_rag.data_model import GraphPage, GraphRelation, PageType
 
 
 class TestCacheUtil(unittest.TestCase):

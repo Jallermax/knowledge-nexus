@@ -7,7 +7,7 @@ from typing import Callable
 
 import requests
 
-from graph_rag.config.config_manager import Config
+from graph_rag.config import Config
 
 
 class NotionAPI:

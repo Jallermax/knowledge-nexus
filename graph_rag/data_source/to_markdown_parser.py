@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from graph_rag.config.config_manager import Config
+from graph_rag.config import Config
 
 logger = logging.getLogger(__name__)
 
