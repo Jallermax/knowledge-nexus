@@ -8,14 +8,141 @@ from graph_rag.data_model import GraphRelation, GraphPage, Chunk, PageType, Rela
 logger = logging.getLogger(__name__)
 
 
+class Neo4jRetriever:
+    def __init__(self, config: Config, graph: Neo4jGraph):
+        self.config = config
+        self.graph = graph
+
+    def get_detailed_context(self, embedding: list[float]) -> dict:
+        similarity_top_k = 5
+        similarity_threshold_1_hop = 0.5
+        similarity_threshold_2_hop = 0.75
+        query = """
+        CALL db.index.vector.queryNodes('chunk_embedding', $top_k, $embedding) YIELD node, score
+        MATCH (p)-[:HAS_CHUNK]->(node)
+        WITH p, node, score
+
+        // Collect all properties of the main node
+        WITH p, node, score, 
+             apoc.map.removeKeys(p {.*}, ['embedding']) AS page_properties,
+             apoc.map.removeKeys(node {.*}, ['embedding']) AS chunk_properties
+
+        // 1-hop neighbors
+        OPTIONAL MATCH (p)-[r1]-(neighbor1)
+        WHERE (neighbor1:Page OR neighbor1:Database OR neighbor1:Bookmark) AND NOT (neighbor1)-[:HAS_CHUNK]->(node)
+        WITH p, node, score, page_properties, chunk_properties, neighbor1, r1
+        OPTIONAL MATCH (neighbor1)-[:HAS_CHUNK]->(neighbor1_chunk:Chunk)
+        WITH p, node, score, page_properties, chunk_properties, neighbor1, r1, neighbor1_chunk,
+             CASE WHEN neighbor1_chunk IS NOT NULL
+                  THEN gds.similarity.cosine(neighbor1_chunk.embedding, $embedding) 
+                  ELSE 0 END AS neighbor1_similarity
+        WHERE neighbor1_similarity > $similarity_threshold_1_hop OR neighbor1 IS NULL
+
+        // 2-hop neighbors
+        OPTIONAL MATCH (neighbor1)-[r2]-(neighbor2)
+        WHERE (neighbor2:Page OR neighbor2:Database OR neighbor2:Bookmark) 
+          AND neighbor2 <> p AND NOT (neighbor2)-[:HAS_CHUNK]->(node)
+        WITH p, node, score, page_properties, chunk_properties, 
+             neighbor1, r1, neighbor1_similarity, neighbor2, r2
+        OPTIONAL MATCH (neighbor2)-[:HAS_CHUNK]->(neighbor2_chunk:Chunk)
+        WITH p, node, score, page_properties, chunk_properties,
+             neighbor1, r1, neighbor1_similarity,
+             neighbor2, r2, neighbor2_chunk,
+             CASE WHEN neighbor2_chunk IS NOT NULL
+                  THEN gds.similarity.cosine(neighbor2_chunk.embedding, $embedding)
+                  ELSE 0 END AS neighbor2_similarity
+        WHERE neighbor2_similarity > $similarity_threshold_2_hop OR neighbor2 IS NULL
+
+        // Collect results
+        WITH p, node, score, page_properties, chunk_properties,
+             collect(DISTINCT {
+                 id: neighbor1.id,
+                 properties: apoc.map.removeKeys(neighbor1 {.*}, ['embedding']),
+                 relation: type(r1),
+                 similarity: neighbor1_similarity
+             }) AS hop1_neighbors,
+             collect(DISTINCT {
+                 id: neighbor2.id,
+                 properties: apoc.map.removeKeys(neighbor2 {.*}, ['embedding']),
+                 relation: type(r2),
+                 similarity: neighbor2_similarity
+             }) AS hop2_neighbors
+        WHERE size(hop1_neighbors) > 0 OR size(hop2_neighbors) > 0
+        RETURN 
+            page_properties,
+            chunk_properties,
+            score AS similarity,
+            hop1_neighbors,
+            hop2_neighbors
+        // LIMIT 1
+        """
+        result = self.graph.query(query, {'embedding': embedding,
+                                          'top_k': similarity_top_k,
+                                          'similarity_threshold_1_hop': similarity_threshold_1_hop,
+                                          'similarity_threshold_2_hop': similarity_threshold_2_hop})
+        return result[0] if result else None
+
+    def get_enhanced_visualization_data(self, embedding: list[float], similarity_threshold: float = 0.5) -> dict:
+        similarity_top_k = 5
+        # similarity_threshold_1_hop = 0.5
+        # similarity_threshold_2_hop = 0.75
+        query = """
+        CALL db.index.vector.queryNodes('chunk_embedding', $top_k, $embedding) YIELD node AS initial_node, score AS initial_score
+        MATCH (p)-[:HAS_CHUNK]->(initial_node)
+        WITH p AS initial_page, initial_node, initial_score
+
+        // Get all nodes within 2 hops
+        MATCH (initial_page)-[r*0..2]-(neighbor)
+        WHERE (neighbor:Page OR neighbor:Database OR neighbor:Bookmark)
+        WITH initial_page, initial_node, initial_score, neighbor, r
+
+        // Calculate similarity for each node
+        OPTIONAL MATCH (neighbor)-[:HAS_CHUNK]->(neighbor_chunk:Chunk)
+        WITH initial_page, initial_node, initial_score, neighbor, r,
+             CASE WHEN neighbor_chunk IS NOT NULL
+                  THEN gds.similarity.cosine(neighbor_chunk.embedding, $embedding)
+                  ELSE 0 END AS similarity
+
+        // Collect nodes and relationships
+        WITH collect(DISTINCT {
+            id: neighbor.id, 
+            title: neighbor.title, 
+            content: neighbor.content,
+            type: labels(neighbor)[0],
+            similarity: similarity,
+            highlighted: similarity >= $similarity_threshold OR neighbor = initial_page
+        }) AS nodes,
+        collect(DISTINCT [
+            startNode(last(r)).id, 
+            startNode(last(r)).title, 
+            endNode(last(r)).id, 
+            endNode(last(r)).title, 
+            type(last(r))
+        ]) AS rels
+
+        // Return the result
+        RETURN 
+            [n IN nodes | n {.*}] AS nodes,
+            [r IN rels | {source: r[1], source_id: r[0], type: r[4], target: r[3], target_id: r[2]}] AS relationships
+        """
+        result = self.graph.query(query, {
+            'embedding': embedding,
+            'top_k': similarity_top_k,
+            'similarity_threshold': similarity_threshold
+        })
+        return result[0] if result else None
+
+
 class Neo4jManager:
     def __init__(self):
         self.config = Config()
         self.graph = Neo4jGraph(
             url=self.config.NEO4J_URI,
             username=self.config.NEO4J_USER,
-            password=self.config.NEO4J_PASSWORD
+            password=self.config.NEO4J_PASSWORD,
+            enhanced_schema=True,
         )
+        self.retriever = Neo4jRetriever(self.config, self.graph)
 
     def clean_database(self):
         self.graph.query("MATCH (n) DETACH DELETE n")
