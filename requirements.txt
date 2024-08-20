@@ -11,6 +11,6 @@ pyaml-env~=1.2.1
 python-dotenv~=1.0.1
 PyYAML~=6.0.2
 spacy~=3.7.5
-setuptools~=72.1.0
+setuptools~=73.0.0
 python-dateutil~=2.9.0.post0
 tiktoken~=0.7.0
