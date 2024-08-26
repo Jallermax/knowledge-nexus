@@ -10,6 +10,6 @@ py2neo~=2021.2.4
 pyaml-env~=1.2.1
 python-dotenv~=1.0.1
 PyYAML~=6.0.2
-spacy~=3.7.5
+spacy~=3.7.6
 python-dateutil~=2.9.0.post0
 tiktoken~=0.7.0
