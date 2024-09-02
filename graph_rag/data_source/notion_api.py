@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import time
 from functools import wraps
@@ -8,6 +9,47 @@ from typing import Callable
 import requests
 
 from graph_rag.config import Config
+
+logger = logging.getLogger(__name__)
+
+
+def cache_api_call(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        cache_key = f"{func.__name__}:{args}:{kwargs}"
+
+        # Check in-memory cache
+        if cache_key in self.cache:
+            cached_data, cache_time = self.cache[cache_key]
+            if not self.cache_ttl or time.time() - cache_time < self.cache_ttl:
+                return cached_data
+
+        # If not in memory, check file cache
+        if self.config.NOTION_CACHE_PATH:
+            safe_filename = self._get_safe_filename(cache_key)
+            file_path = os.path.join(self.config.NOTION_CACHE_PATH, safe_filename)
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    file_cache = json.load(f)
+                if not self.cache_ttl or time.time() - file_cache['time'] < self.cache_ttl:
+                    self.cache[cache_key] = (file_cache['data'], file_cache['time'])
+                    return file_cache['data']
+
+        # If not in cache or expired, call the API
+        result = func(self, *args, **kwargs)
+
+        # Update in-memory cache
+        self.cache[cache_key] = (result, time.time())
+
+        # Update file cache
+        if self.config.NOTION_CACHE_PATH:
+            os.makedirs(self.config.NOTION_CACHE_PATH, exist_ok=True)
+            with open(file_path, 'w') as f:
+                json.dump({'data': result, 'time': time.time()}, f)
+
+        return result
+
+    return wrapper
 
 
 class NotionAPI:
@@ -28,44 +70,6 @@ class NotionAPI:
         """Generate a safe filename from the cache key."""
         return hashlib.md5(cache_key.encode()).hexdigest() + '.json'
 
-    def cache_api_call(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            cache_key = f"{func.__name__}:{args}:{kwargs}"
-
-            # Check in-memory cache
-            if cache_key in self.cache:
-                cached_data, cache_time = self.cache[cache_key]
-                if not self.cache_ttl or time.time() - cache_time < self.cache_ttl:
-                    return cached_data
-
-            # If not in memory, check file cache
-            if self.config.NOTION_CACHE_PATH:
-                safe_filename = self._get_safe_filename(cache_key)
-                file_path = os.path.join(self.config.NOTION_CACHE_PATH, safe_filename)
-                if os.path.exists(file_path):
-                    with open(file_path, 'r') as f:
-                        file_cache = json.load(f)
-                    if not self.cache_ttl or time.time() - file_cache['time'] < self.cache_ttl:
-                        self.cache[cache_key] = (file_cache['data'], file_cache['time'])
-                        return file_cache['data']
-
-            # If not in cache or expired, call the API
-            result = func(self, *args, **kwargs)
-
-            # Update in-memory cache
-            self.cache[cache_key] = (result, time.time())
-
-            # Update file cache
-            if self.config.NOTION_CACHE_PATH:
-                os.makedirs(self.config.NOTION_CACHE_PATH, exist_ok=True)
-                with open(file_path, 'w') as f:
-                    json.dump({'data': result, 'time': time.time()}, f)
-
-            return result
-
-        return wrapper
-
     @cache_api_call
     def get_page_metadata(self, page_id):
         url = f"{self.base_url}pages/{page_id}"
@@ -85,7 +89,7 @@ class NotionAPI:
         if response.status_code == 200:
             return response.json()
         elif 500 <= response.status_code < 600 and first_call:
-            print("Retrying after 1 second...")
+            logger.info("Retrying failed request after 1 second...")
             time.sleep(1)
             return self.get_page_content_blocks(page_id, first_call=False, start_cursor=start_cursor,
                                                 page_size=page_size)
@@ -115,7 +119,7 @@ class NotionAPI:
         if response.status_code == 200:
             return response.json()
         elif 500 <= response.status_code < 600 and first_call:
-            print("Retrying after 1 second...")
+            logger.info("Retrying failed request after 1 second...")
             time.sleep(1)
             return self.get_page_properties(page_id, property_id, first_call=False, start_cursor=start_cursor,
                                             page_size=page_size)
@@ -158,6 +162,46 @@ class NotionAPI:
             return response.json()
         else:
             raise Exception(f"Failed to query database: {response.status_code} - {response.text}\nurl={url}")
+
+    @cache_api_call
+    def get_search_results(self, query: str = None, **search_filter) -> list[dict]:
+        url = f"{self.base_url}search"
+        params = {}
+        if query:
+            params["query"] = query
+        if search_filter:
+            params["filter"] = search_filter
+
+        return self._get_all_paginated_results(url, **params)
+
+    def _get_all_paginated_results(self, url, r_type=requests.api.post, page_size=100, **payload_params) -> list[dict]:
+        logger.debug(f"Fetching paginated items from {url}(params: {payload_params})...")
+        all_items = []
+        has_more = True
+        first_call = True
+        payload = {
+            "page_size": page_size,
+            **payload_params
+        }
+
+        while has_more:
+            response = r_type(url, headers=self.headers, timeout=self.config.NOTION_API_TIMEOUT, json=payload)
+            if response.status_code == 200:
+                response_json = response.json()
+                all_items.extend(response_json['results'])
+                has_more = response_json['has_more']
+                payload.update({"start_cursor": response_json.get('next_cursor')})
+                first_call = True
+                logger.debug(
+                    f"Retrieved {len(all_items)} paginated items.{' Fetching next page' if has_more else ' Finished.'}")
+            elif 500 <= response.status_code < 600 and first_call:
+                logger.info("Retrying failed request after 1 second...")
+                first_call = False
+                time.sleep(1)
+            else:
+                response.raise_for_status()
+
+        return all_items
 
     def get_all_database_items(self, database_id):
         all_items = []

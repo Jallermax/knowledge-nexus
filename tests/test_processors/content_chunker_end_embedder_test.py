@@ -55,7 +55,6 @@ class TestChunkCreator(unittest.TestCase):
         page = GraphPage(id="1", title="Test Page", type=PageType.PAGE, content="This is a test content.",
                          last_edited_time="2024-01-01", url="")
         result = self.chunk_creator.create_chunks(page)
-        print(f"THIS IS RESULT: {result=}")
         expected_chunks = ['Title: Test Page\nLast edited time: 2024-01-01\n\nContent:\nThis is a test',
                            'Title: Test Page\nLast edited time: 2024-01-01\n\nContent:\na test content.']
         self.assertEqual(2, len(result))

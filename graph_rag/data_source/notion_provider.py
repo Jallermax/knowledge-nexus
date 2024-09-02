@@ -91,13 +91,24 @@ class NotionProvider(ContentProvider):
             except Exception as e:
                 logger.warning(f"Failed to load cache: {e}. Running the ingestion process.")
 
-        logger.info(f"Processing root page: {root_page_id}")
-        root_page = self.notion_api.get_root_page_info(root_page_id)
-        notion_page = GraphPage(normalize_uuid(root_page['id']), _extract_title(root_page),
-                                get_page_type_from_string(root_page['object']),
-                                root_page['url'], source='Notion', last_edited_time=root_page['last_edited_time'])
-        self.prepared_pages.update({notion_page.id: notion_page})
-        notion_page.content = self.recursive_process_page_content(root_page)
+        if not root_page_id:
+            logger.info("No root page id provided. Fetching all available pages.")
+            all_pages = self.notion_api.get_search_results()
+            for page in all_pages:
+                notion_page = GraphPage(normalize_uuid(page['id']), _extract_title(page),
+                                        get_page_type_from_string(page['object']),
+                                        page['url'], source='Notion',
+                                        last_edited_time=page['last_edited_time'])
+                self.prepared_pages.update({notion_page.id: notion_page})
+                notion_page.content = self.recursive_process_page_content(page)
+        else:
+            logger.info(f"Processing root page: {root_page_id}")
+            root_page = self.notion_api.get_root_page_info(root_page_id)
+            notion_page = GraphPage(normalize_uuid(root_page['id']), _extract_title(root_page),
+                                    get_page_type_from_string(root_page['object']),
+                                    root_page['url'], source='Notion', last_edited_time=root_page['last_edited_time'])
+            self.prepared_pages.update({notion_page.id: notion_page})
+            notion_page.content = self.recursive_process_page_content(root_page)
 
         if self.config.CACHE_ENABLED:
             cache_util.save_prepared_pages_to_cache(root_page_id, self.prepared_pages)
