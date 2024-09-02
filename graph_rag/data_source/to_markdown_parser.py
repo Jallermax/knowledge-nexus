@@ -118,7 +118,7 @@ class Notion2MarkdownParser:
 
     @staticmethod
     def _handle_files(value: list[dict]) -> str:
-        return ", ".join([f"[{file.get('name', 'Unnamed')}]({file['external']['url']})" for file in value])
+        return ", ".join([f"[{file.get('name', 'Unnamed')}]({file[file['type']]['url']})" for file in value])
 
     @staticmethod
     def _handle_formula(value: dict) -> str:
