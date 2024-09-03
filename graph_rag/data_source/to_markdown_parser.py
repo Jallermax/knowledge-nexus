@@ -231,9 +231,9 @@ class Notion2MarkdownParser:
     @staticmethod
     def _handle_callout(block: dict, indent: str) -> str:
         icon = block['callout']['icon']
-        icon_string = f":{icon['emoji']}:" if icon['type'] == 'emoji' else f"[Icon: {icon['type']}]"
+        icon_string = f" :{icon['emoji']}:" if icon['type'] == 'emoji' else f"[Icon: {icon['type']}]" if icon else ''
         text = _extract_rich_text(block['callout']['rich_text'])
-        return f"{indent}> {icon_string} {text}\n\n"
+        return f"{indent}>{icon_string} {text}\n\n"
 
     @staticmethod
     def _handle_child_database(block: dict, indent: str) -> str:
