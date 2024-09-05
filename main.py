@@ -3,7 +3,6 @@ import os
 
 import dotenv
 
-from graph_rag.pipeline import DataProcessingPipeline
 from graph_rag.processor import ContentChunkerAndEmbedder
 from graph_rag.processor.graph_builder import GraphBuilder
 from graph_rag.storage import Neo4jManager

@@ -134,7 +134,7 @@ class Notion2MarkdownParser:
 
     @staticmethod
     def _handle_multi_select(value: list[dict]) -> str:
-        return ", ".join([option['name'] for option in value])
+        return " ".join([Notion2MarkdownParser._handle_select(option) for option in value])
 
     @staticmethod
     def _handle_number(value: float) -> str:
@@ -162,7 +162,8 @@ class Notion2MarkdownParser:
 
     @staticmethod
     def _handle_select(value: dict) -> str:
-        return value.get('name', 'N/A')
+        name = value.get('name')
+        return f"#{name}" if name else ''
 
     @staticmethod
     def _handle_status(value: dict) -> str:
@@ -231,7 +232,7 @@ class Notion2MarkdownParser:
     @staticmethod
     def _handle_callout(block: dict, indent: str) -> str:
         icon = block['callout']['icon']
-        icon_string = f" :{icon['emoji']}:" if icon['type'] == 'emoji' else f"[Icon: {icon['type']}]" if icon else ''
+        icon_string = f" :{icon['emoji']}:" if icon and icon['emoji'] else ''
         text = _extract_rich_text(block['callout']['rich_text'])
         return f"{indent}>{icon_string} {text}\n\n"
 
