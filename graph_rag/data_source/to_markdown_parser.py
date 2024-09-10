@@ -232,7 +232,7 @@ class Notion2MarkdownParser:
     @staticmethod
     def _handle_callout(block: dict, indent: str) -> str:
         icon = block['callout']['icon']
-        icon_string = f" :{icon['emoji']}:" if icon and icon['emoji'] else ''
+        icon_string = f" :{icon['emoji']}:" if icon and icon.get('emoji') else ''
         text = _extract_rich_text(block['callout']['rich_text'])
         return f"{indent}>{icon_string} {text}\n\n"
 
