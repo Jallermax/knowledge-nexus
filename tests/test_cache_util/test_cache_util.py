@@ -8,13 +8,14 @@ from unittest.mock import patch
 
 class MockConfig:
     def __init__(self):
+        self.DATA_DIR = 'data'
         self.CACHE_PATH = tempfile.mkdtemp()
         self.CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
 with patch('graph_rag.config.Config', MockConfig):
     from graph_rag.utils import cache_util
-    from graph_rag.data_model import Cacheable
+    from graph_rag.data_model import Cacheable, RelationType
     from graph_rag.data_model import GraphPage, GraphRelation, PageType
 
 
@@ -26,12 +27,13 @@ class TestCacheUtil(unittest.TestCase):
 
     def tearDown(self):
         self.patcher.stop()
-        for file in os.listdir(self.mock_config.CACHE_PATH):
-            os.remove(os.path.join(self.mock_config.CACHE_PATH, file))
-        os.rmdir(self.mock_config.CACHE_PATH)
+        path = os.path.join(self.mock_config.DATA_DIR, self.mock_config.CACHE_PATH)
+        for file in os.listdir(path):
+            os.remove(os.path.join(path, file))
+        os.rmdir(path)
 
     def test_save_and_load_cache(self):
-        file_path = os.path.join(self.mock_config.CACHE_PATH, 'test_cache.pkl')
+        file_path = os.path.join(self.mock_config.DATA_DIR, self.mock_config.CACHE_PATH, 'test_cache.pkl')
         data = {'key': 'value'}
         cache_util.save_cache(file_path, data)
         loaded_data = cache_util.load_cache(file_path)
@@ -105,8 +107,8 @@ class TestCacheUtil(unittest.TestCase):
     def test_save_and_load_page_relations(self):
         root_page_id = 'root_id'
         page_relations = [
-            GraphRelation('page1', 'CONTAINS', 'page2'),
-            GraphRelation('page2', 'REFERENCES', 'page3')
+            GraphRelation('page1', RelationType.CONTAINS, 'page2'),
+            GraphRelation('page2', RelationType.REFERENCES, 'page3')
         ]
         cache_util.save_page_relations_to_cache(root_page_id, page_relations)
         loaded_relations = cache_util.load_page_relations_from_cache(root_page_id)
