@@ -27,7 +27,8 @@ def cache_api_call(func: Callable) -> Callable:
         # If not in memory, check file cache
         if self.config.NOTION_CACHE_PATH:
             safe_filename = self._get_safe_filename(cache_key)
-            file_path = os.path.join(self.config.NOTION_CACHE_PATH, safe_filename)
+            cache_path = os.path.join(self.config.DATA_DIR, self.config.NOTION_CACHE_PATH)
+            file_path = os.path.join(cache_path, safe_filename)
             if os.path.exists(file_path):
                 with open(file_path, 'r') as f:
                     file_cache = json.load(f)
@@ -43,7 +44,7 @@ def cache_api_call(func: Callable) -> Callable:
 
         # Update file cache
         if self.config.NOTION_CACHE_PATH:
-            os.makedirs(self.config.NOTION_CACHE_PATH, exist_ok=True)
+            os.makedirs(cache_path, exist_ok=True)
             with open(file_path, 'w') as f:
                 json.dump({'data': result, 'time': time.time()}, f)
 

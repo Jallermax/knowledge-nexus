@@ -67,7 +67,6 @@ class NotionProvider(ContentProvider):
         self.content_parser = Notion2MarkdownParser()
         self.prepared_pages: dict[str, GraphPage] = {}
         self.page_relations: list[GraphRelation] = []
-        os.makedirs(self.config.CACHE_PATH, exist_ok=True)
 
     def _fetch_data(self) -> ProcessedData:
         self.process_pages(self.config.NOTION_ROOT_PAGE_ID)
