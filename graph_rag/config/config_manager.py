@@ -13,6 +13,8 @@ class Config:
         config_path = str(Path(__file__).parent.parent.parent / 'config' / 'config.yaml')
         config_data: dict[str, Any] = parse_config(config_path, tag=None, default_value='')
 
+        self.DATA_DIR: str  = 'data'
+
         # Notion API configuration
         notion_config = config_data['notion_api']
         self.NOTION_API_KEY: str = notion_config['api_key']

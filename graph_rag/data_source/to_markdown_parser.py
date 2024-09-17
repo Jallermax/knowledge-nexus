@@ -118,7 +118,7 @@ class Notion2MarkdownParser:
 
     @staticmethod
     def _handle_files(value: list[dict]) -> str:
-        return ", ".join([f"[{file.get('name', 'Unnamed')}]({file['external']['url']})" for file in value])
+        return ", ".join([f"[{file.get('name', 'Unnamed')}]({file[file['type']]['url']})" for file in value])
 
     @staticmethod
     def _handle_formula(value: dict) -> str:
@@ -134,7 +134,7 @@ class Notion2MarkdownParser:
 
     @staticmethod
     def _handle_multi_select(value: list[dict]) -> str:
-        return ", ".join([option['name'] for option in value])
+        return " ".join([Notion2MarkdownParser._handle_select(option) for option in value])
 
     @staticmethod
     def _handle_number(value: float) -> str:
@@ -162,7 +162,8 @@ class Notion2MarkdownParser:
 
     @staticmethod
     def _handle_select(value: dict) -> str:
-        return value.get('name', 'N/A')
+        name = value.get('name')
+        return f"#{name}" if name else ''
 
     @staticmethod
     def _handle_status(value: dict) -> str:
@@ -231,9 +232,9 @@ class Notion2MarkdownParser:
     @staticmethod
     def _handle_callout(block: dict, indent: str) -> str:
         icon = block['callout']['icon']
-        icon_string = f":{icon['emoji']}:" if icon['type'] == 'emoji' else f"[Icon: {icon['type']}]"
+        icon_string = f" :{icon['emoji']}:" if icon and icon.get('emoji') else ''
         text = _extract_rich_text(block['callout']['rich_text'])
-        return f"{indent}> {icon_string} {text}\n\n"
+        return f"{indent}>{icon_string} {text}\n\n"
 
     @staticmethod
     def _handle_child_database(block: dict, indent: str) -> str:

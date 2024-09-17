@@ -55,7 +55,9 @@ def custom_deserializer(obj):
 
 
 def save_model_cache(file_name: str, model_data: Any, model_class: Type[Cacheable], key: str):
-    file_path = os.path.join(config.CACHE_PATH, file_name)
+    cache_path = os.path.join(config.DATA_DIR, config.CACHE_PATH)
+    os.makedirs(cache_path, exist_ok=True)
+    file_path = os.path.join(cache_path, file_name)
     # Load existing cache or create a new one
     try:
         cache_data = load_cache(file_path)
@@ -77,7 +79,7 @@ def save_model_cache(file_name: str, model_data: Any, model_class: Type[Cacheabl
 
 
 def load_model_cache(file_name: str, model_class: Type[Cacheable], key: str) -> Any:
-    file_path = os.path.join(config.CACHE_PATH, file_name)
+    file_path = os.path.join(config.DATA_DIR, config.CACHE_PATH, file_name)
     cache_data = load_cache(file_path)
 
     if key not in cache_data:
