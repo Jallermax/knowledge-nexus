@@ -67,7 +67,11 @@ Knowledge Nexus is primarily designed for individual users who:
 - Want to reduce the cognitive overhead of manual knowledge management
 - Are looking for a personal research assistant to aid in complex tasks or decision-making
 
-## 🔗 Supported Notion Links
+## Development
+
+<details>
+<summary>🔗 Supported Notion Links</summary>
+<br />
 
 | Type                                     | Parse Markdown Text | Parse References | Recursive Parsing |
 |------------------------------------------|:-------------------:|:----------------:|:-----------------:|
@@ -149,13 +153,11 @@ Knowledge Nexus is primarily designed for individual users who:
 | Child Database (except linked and views) |          ✅          |        ✅         |         ✅         |
 | **Comments**                             |          ❌          |        ❌         |         ❌         |
 
-## 🔮 Future Enhancements
+</details>
 
-- Enhanced personalization through adaptive learning of user preferences and interests
-- Integration with additional productivity tools and data sources
-- Advanced visualization options for exploring your knowledge graph
-
-## 🛠️ TODO: Implementation Steps
+<details>
+<summary>🛠️ TODO: Implementation Steps</summary>
+<br />
 
 1. Data Source Integration
     - [X] Implement [Notion API](https://developers.notion.com/reference/get-database) client
@@ -204,6 +206,14 @@ Knowledge Nexus is primarily designed for individual users who:
 8. Advanced Features
     - [ ] Implement token-cost [estimation](https://github.com/AgentOps-AI/tokencost)
     - [ ] Implement langfuse for agents and flow evaluation
+
+</details>
+
+## 🔮 Future Enhancements
+
+- Enhanced personalization through adaptive learning of user preferences and interests
+- Integration with additional productivity tools and data sources
+- Advanced visualization options for exploring your knowledge graph
 
 ## 📚 Resources and inspirations
 
