@@ -5,13 +5,21 @@
 
 1. install neo4j
 2. install python
-3. make and configure `.env` in root directory
+3. make and configure `.env` in the root directory from `.env.example`
 4. adjust options in `config/config.yaml` if necessary
 5. `pip install -r requirements.txt`
 6. `python main.py`
 
+### Alternative: Using docker-compose 
+
+1. install docker and docker-compose
+2. make and configure `.env` in the root directory from `.env.example`
+3. adjust options in `config/config.yaml` if necessary
+4. run `docker-compose up -d --build` from the root
+</br>
+
 > ⚠️ Current cache limitations:
-> - **Notion-api cache:** Designed for session scope caching, using FS cache with long TTL will prevent from fetching updated pages
+> - **Notion-API cache:** Designed for session scope caching, using FS cache with long TTL will prevent from fetching updated pages
 > - **Processed pages and links cache:** Designed for rapid test and development. Prevents sync of removing of already processed and cached pages and links from graph
 
 ## 🌟 Project Overview
@@ -50,7 +58,7 @@ personal knowledge base.
   for adding new sources).
 - **AI-Powered Entity and Topic Extraction**: Automatically identify and extract key entities and topics from processed
   content.
-- **Intelligent Insight Generation**: Leverage AI to generate concise insights from your personal knowledge base.
+- **Intelligent Insight Generation**: Leverage AI to generate concise insights from your personal knowledge base (PKMS).
 - **Semantic Knowledge Graph Construction**: Build a comprehensive, interconnected graph of entities, topics, and
   content using Neo4j, reflecting not just explicit links but semantic relationships.
 - **Contextual Querying and Exploration**: Easily retrieve relevant content and explore connections within your
@@ -58,20 +66,16 @@ personal knowledge base.
 - **Personalized Knowledge Assistant**: Tailored to your specific needs and preferences, helping you find tools,
   frameworks, and best practices aligned with your views.
 
-## 👥 Who Is It For?
+## 📊 Project Status and Roadmap
 
-Knowledge Nexus is primarily designed for individual users who:
-
-- Deal with large amounts of information from various sources
-- Seek to uncover new insights and connections within their knowledge base
-- Want to reduce the cognitive overhead of manual knowledge management
-- Are looking for a personal research assistant to aid in complex tasks or decision-making
-
-## Development
-
-<details>
-<summary>🔗 Supported Notion Links</summary>
-<br />
+### ✅ Implemented
+- Modular Pipeline for data ingestion, processing, and graph building with configurable caching of processed data.
+- [Notion API](https://developers.notion.com/reference/get-database) integration with configurable request caching: Successfully ingesting documents from Notion Knowledge Base (all pages or from specified root page). Repeated ingestion will process only updated pages. 
+- Basic Graph Construction: Creating graph connections based on knowledge base organizational structure and explicit page mentions.
+- Semantic Search: Implemented content embeddings for advanced search capabilities.
+<details> 
+   <summary>Click to see supported Notion Links 🔗</summary>
+   </br>
 
 | Type                                     | Parse Markdown Text | Parse References | Recursive Parsing |
 |------------------------------------------|:-------------------:|:----------------:|:-----------------:|
@@ -155,65 +159,41 @@ Knowledge Nexus is primarily designed for individual users who:
 
 </details>
 
-<details>
-<summary>🛠️ TODO: Implementation Steps</summary>
-<br />
 
-1. Data Source Integration
-    - [X] Implement [Notion API](https://developers.notion.com/reference/get-database) client
-    - [X] Notion: Process only pages with last_edited_time > than last_edited_time in graph
-    - [ ] Develop Pocket API integration
-    - [ ] Create a web scraper for processing URLs
-    - [X] Create unified data models
-    - [X] Design a unified interface for data source processors
-
-2. Content Processing
-    - [ ] Implement entity extraction using NLP techniques
-    - [ ] Develop an insight generation module using LLMs
-    - [ ] Create a content summarization feature
-    - [X] Add file caching of raw and processed content
-    - [X] Create content embeddings for semantic search
-
-3. Knowledge Graph Management
-    - [X] Set up Neo4j database integration
-    - [X] Implement node and relationship creation logic
-    - [ ] Develop query methods for retrieving related content
-    - [ ] Create visualizations for the knowledge graph
-
-4. AI Agents
-    - [ ] Design a flexible AI agent architecture
-    - [ ] Implement specific agents for entity extraction, insight generation, and summarization
-    - [ ] Develop a system for managing different LLM models and configurations
-
-5. Pipeline Orchestration
-    - [ ] Create a modular pipeline for processing content from ingestion to storage
-    - [ ] Implement error handling and logging throughout the pipeline
-    - [ ] Develop a system for incremental updates and change detection
-
-6. User Interface
-    - [ ] Add Streamlit for interacting with the system
-    - [ ] Implement natural language querying of the knowledge graph
-    - [ ] Create a web-based dashboard for visualizing insights and connections (InfraNodus-like)
-
-7. Testing and Quality Assurance
-    - [ ] Develop unit tests for each module
-    - [ ] Implement integration tests for the entire pipeline
-    - [ ] Create a suite of sample data for testing and demonstration
-    - [ ] Evaluate entity extraction using different models, different contexts, and different prompts
-    - [ ] Evaluate relation and weights creation using different models, different contexts, and different prompts
-    - [ ] Evaluate GraphRAG using different embeddings and prompts
-
-8. Advanced Features
-    - [ ] Implement token-cost [estimation](https://github.com/AgentOps-AI/tokencost)
-    - [ ] Implement langfuse for agents and flow evaluation
+### 🛠️ In Development
+- Multi-Source Data Integration: Expanding beyond Notion to include Pocket, web pages, and more. 
+Make these integrations easy to plug in. 
+- Semantic Layer: Adding connections based on topics and ideas using semantic entity extraction
+  - Use core entity/node types (Page, Database, Topic, Person, Location) as well as domain-specific (Project, Task, Tool, Goal)  
+- Node Clustering: Implementing clustering for better organization and insight discovery.
+- Comprehensive RAG Mechanism: Developing an advanced retrieval-augmented generation system. <details> <summary>Click to see draft implementation details</summary>
+  1. Generate query questions to the graph from user requests
+  2. Retrieve semantically similar pages
+  3. Fetch close neighbors of these pages based on semantic proximity
+  4. Provide LLM with context from the closest pages (semantically)
+  5. Visualize the graph showing found pages, their semantic scores, neighbors, connections, and topic clusters
+- Achieve 90%+ test coverage
 
 </details>
 
-## 🔮 Future Enhancements
+### 🔮 Future Plans
+- Streamlit chat interface with dashboard for visualizing insights and connections (InfraNodus-like).
+- Add evaluation mechanism (langfuse?) for entity extraction and graph building with different models, contexts, and prompts.
+- Add evaluation mechanism (RAGAS?) for RAG with different embedding models, query generations, and retrieval flows.
+- Dynamic Topic and Cluster Recalculation: Efficiently update topics and clusters upon ingestion of new sources.
+- Advanced Visualization: Develop more sophisticated options for exploring the knowledge graph.
+- Self-hosted LLM Options: Provide alternatives to OpenAI's API for enhanced privacy.
+- Enhanced Personalization: Implement adaptive learning of user preferences and interests.
+- Implement token-cost [estimation](https://github.com/AgentOps-AI/tokencost).
 
-- Enhanced personalization through adaptive learning of user preferences and interests
-- Integration with additional productivity tools and data sources
-- Advanced visualization options for exploring your knowledge graph
+## 👥 Who Is It For?
+
+Knowledge Nexus is primarily designed for individual users who:
+
+- Deal with large amounts of information from various sources
+- Seek to uncover new insights and connections within their knowledge base
+- Want to reduce the cognitive overhead of manual knowledge management
+- Are looking for a personal research assistant to aid in complex tasks or decision-making
 
 ## 📚 Resources and inspirations
 
@@ -223,13 +203,14 @@ Knowledge Nexus is primarily designed for individual users who:
 
 ## 🤝 Contributing
 
-Knowledge Nexus is currently a personal project, but ideas and suggestions are welcome! Feel free to open an issue for
+Currently, Knowledge Nexus is a personal project, but ideas and suggestions are welcome! Feel free to open an issue for
 discussion or submit a pull request with proposed changes.
 
 ## 🔒 Privacy and Data Handling
 
-Knowledge Nexus is designed with your privacy in mind. All data is stored locally on your machine. The only external
-service used is OpenAI's API for AI processing, which is subject to their privacy policy and data handling practices.
+Knowledge Nexus is designed with the privacy in mind. All data is stored locally on your machine. The only external
+service used currently is OpenAI's API for AI processing, which is subject to their privacy policy and data handling practices.
+Later other LLM adapters will be added including adapters for self-hosted LLMs. 
 
 ---
 
