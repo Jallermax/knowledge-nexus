@@ -19,8 +19,8 @@
 </br>
 
 > ⚠️ Current cache limitations:
-> - **Notion-API cache:** Designed for session scope caching, using FS cache with long TTL will prevent from fetching updated pages
-> - **Processed pages and links cache:** Designed for rapid test and development. Prevents sync of removing of already processed and cached pages and links from graph
+> - **Notion-API cache:** Designed for session scope caching, using FS cache with long TTL will prevent fetching updated pages
+> - **Processed pages and links cache:** Designed for rapid test and development. Prevents sync or removal of already processed and cached pages and links from the graph
 
 ## 🌟 Project Overview
 
@@ -178,6 +178,8 @@ Make these integrations easy to plug in.
 
 ### 🔮 Future Plans
 - Streamlit chat interface with dashboard for visualizing insights and connections (InfraNodus-like).
+- Add cross-source coreference resolution to merge the same entities from different sources (leverage string matching, embedding similarity, and context analysis).
+  - disambiguate entities with the same name but different meanings. Consider entity context and graph relationships.
 - Add evaluation mechanism (langfuse?) for entity extraction and graph building with different models, contexts, and prompts.
 - Add evaluation mechanism (RAGAS?) for RAG with different embedding models, query generations, and retrieval flows.
 - Dynamic Topic and Cluster Recalculation: Efficiently update topics and clusters upon ingestion of new sources.
