@@ -26,6 +26,9 @@
 
 ![ingestion visualization](/docs/ingestion.png)
 
+High-level architecture of the Knowledge Nexus system:
+![architecture flowchart](/docs/flowchart-diagram.png)
+
 Knowledge Nexus is an advanced personal knowledge management system that transforms the way individuals organize,
 process, and discover insights from their digital content. By leveraging the power of AI and graph databases, this
 project addresses the challenge of information overload and disconnected data silos that many knowledge workers face in
