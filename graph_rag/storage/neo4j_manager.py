@@ -84,24 +84,22 @@ class Neo4jRetriever:
 
     def get_enhanced_visualization_data(self, embedding: list[float], similarity_threshold: float = 0.5) -> dict:
         similarity_top_k = 5
-        # similarity_threshold_1_hop = 0.5
-        # similarity_threshold_2_hop = 0.75
         query = """
         CALL db.index.vector.queryNodes('chunk_embedding', $top_k, $embedding) YIELD node AS initial_node, score AS initial_score
         MATCH (p)-[:HAS_CHUNK]->(initial_node)
         WITH p AS initial_page, initial_node, initial_score
 
         // Get all nodes within 2 hops
-        MATCH (initial_page)-[r*0..2]-(neighbor)
+        MATCH path = (initial_page)-[r*0..2]-(neighbor)
         WHERE (neighbor:Page OR neighbor:Database OR neighbor:Bookmark)
-        WITH initial_page, initial_node, initial_score, neighbor, r
+        WITH initial_page, initial_node, initial_score, neighbor, r, path
 
         // Calculate similarity for each node
         OPTIONAL MATCH (neighbor)-[:HAS_CHUNK]->(neighbor_chunk:Chunk)
-        WITH initial_page, initial_node, initial_score, neighbor, r,
-             CASE WHEN neighbor_chunk IS NOT NULL
-                  THEN gds.similarity.cosine(neighbor_chunk.embedding, $embedding)
-                  ELSE 0 END AS similarity
+        WITH initial_page, initial_node, initial_score, neighbor, r, path,
+            CASE WHEN neighbor_chunk IS NOT NULL
+                THEN gds.similarity.cosine(neighbor_chunk.embedding, $embedding)
+                ELSE 0 END AS similarity
 
         // Collect nodes and relationships
         WITH collect(DISTINCT {
@@ -110,20 +108,22 @@ class Neo4jRetriever:
             content: neighbor.content,
             type: labels(neighbor)[0],
             similarity: similarity,
-            highlighted: similarity >= $similarity_threshold OR neighbor = initial_page
+            highlighted: similarity >= $similarity_threshold OR neighbor = initial_page,
+            hop_distance: length(path) - 1
         }) AS nodes,
         collect(DISTINCT [
             startNode(last(r)).id, 
             startNode(last(r)).title, 
             endNode(last(r)).id, 
             endNode(last(r)).title, 
-            type(last(r))
+            type(last(r)),
+            length(path) - 1
         ]) AS rels
 
         // Return the result
         RETURN 
             [n IN nodes | n {.*}] AS nodes,
-            [r IN rels | {source: r[1], source_id: r[0], type: r[4], target: r[3], target_id: r[2]}] AS relationships
+            [r IN rels | {source: r[1], source_id: r[0], type: r[4], target: r[3], target_id: r[2], hop_distance: r[5]}] AS relationships
         """
         result = self.graph.query(query, {
             'embedding': embedding,

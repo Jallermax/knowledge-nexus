@@ -77,3 +77,5 @@ class Config:
         for k in keys:
             value = value.get(k, {})
         return value if value != {} else default
+
+default_config = Config()
