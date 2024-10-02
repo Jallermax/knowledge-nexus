@@ -3,6 +3,10 @@
 
 ## 🛠 Getting Started
 
+### Running Data Ingestion:
+
+#### Using Python environment
+
 1. install neo4j
 2. install python
 3. make and configure `.env` in the root directory from `.env.example`
@@ -10,7 +14,7 @@
 5. `pip install -r requirements.txt`
 6. `python main.py`
 
-### Alternative: Using docker-compose 
+#### Alternative: Using docker-compose 
 
 1. install docker and docker-compose
 2. make and configure `.env` in the root directory from `.env.example`
@@ -21,6 +25,12 @@
 > ⚠️ Current cache limitations:
 > - **Notion-API cache:** Designed for session scope caching, using FS cache with long TTL will prevent fetching updated pages
 > - **Processed pages and links cache:** Designed for rapid test and development. Prevents sync or removal of already processed and cached pages and links from the graph
+
+### Running Q&A app:
+
+1. Prerequisites: running Neo4j instance with processed data
+2. `pip install -r requirements.txt`
+3. `python -m streamlit run app_st.py`
 
 ## 🌟 Project Overview
 
@@ -76,9 +86,11 @@ personal knowledge base.
 - [Notion API](https://developers.notion.com/reference/get-database) integration with configurable request caching: Successfully ingesting documents from Notion Knowledge Base (all pages or from specified root page). Repeated ingestion will process only updated pages. 
 - Basic Graph Construction: Creating graph connections based on knowledge base organizational structure and explicit page mentions.
 - Semantic Search: Implemented content embeddings for advanced search capabilities.
+- Basic Streamlit app for querying the graph and visualizing connections.
+
 <details> 
    <summary>Click to see supported Notion Links 🔗</summary>
-   </br>
+   <br>
 
 | Type                                     | Parse Markdown Text | Parse References | Recursive Parsing |
 |------------------------------------------|:-------------------:|:----------------:|:-----------------:|
@@ -162,7 +174,6 @@ personal knowledge base.
 
 </details>
 
-
 ### 🛠️ In Development
 - Multi-Source Data Integration: Expanding beyond Notion to include Pocket, web pages, and more. 
 Make these integrations easy to plug in. 
@@ -174,10 +185,9 @@ Make these integrations easy to plug in.
   2. Retrieve semantically similar pages
   3. Fetch close neighbors of these pages based on semantic proximity
   4. Provide LLM with context from the closest pages (semantically)
-  5. Visualize the graph showing found pages, their semantic scores, neighbors, connections, and topic clusters
-- Achieve 90%+ test coverage
+  5. Visualize the graph showing found pages, their semantic scores, neighbors, connections, and topic clusters</details>
 
-</details>
+- Achieve 90%+ test coverage
 
 ### 🔮 Future Plans
 - Streamlit chat interface with dashboard for visualizing insights and connections (InfraNodus-like).
