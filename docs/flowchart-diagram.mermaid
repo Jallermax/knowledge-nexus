@@ -1,58 +1,63 @@
 flowchart TB
-    subgraph DataSources ["Data Sources"]
-        Notion["Notion"]
-        Todoist["Todoist"]
-        Pocket["Pocket"]
-        Web["Web Pages"]
-    end
 
-    subgraph Ingestion ["Data Ingestion"]
-        direction TB
-        NotionProvider>"Notion Provider"]
-        TodoistProvider>"Todoist Provider"]
-        PocketProvider>"Pocket Provider"]
-        WebProvider>"Web Scrapper"]
-    end
-    
-    subgraph ProcessingPipeline ["Processing Pipeline"]
+    subgraph IngestionApp ["Ingestion Architecture"]
         direction LR
-        Chunking[["Content Chunking"]]
-        EntityExtraction[["Entity Extraction"]]
-        TopicModeling[["Topic Modeling"]]
-        Clusterization[["Clusterization"]]
-        Embedding[["Embedding Generation"]]
+	    subgraph Ingestion ["Pluggable Data providers"]
+	        direction TB
+	        NotionProvider>"Notion Provider"]
+	        TodoistProvider>"Todoist Provider"]
+	        WebProvider>"Web Scrapper"]
+	        CustomProviders@{ shape: processes, label: "Custom Providers" }
+	    end
+
+	    subgraph ProcessingPipeline ["Processing Pipeline"]
+	        direction LR
+	        Chunking[["Content Chunking"]]
+	        EntityExtraction[["Entity Extraction"]]
+	        TopicModeling[["Topic Modeling"]]
+	        Clusterization[["Clusterization"]]
+	        Embedding[["Embedding Generation"]]
+	    end
+
+	    UnifiedData[/"Raw Graph
+	    (based on data structure)"/]
+
+	    KnowledgeGraph[/"Enriched Knowledge Graph
+	    (structure + semantic relations)"/]
+
+    end
+    subgraph QnAApp ["Q&A Architecture"]
+        QueryProcessor["Query Processor"]
+        StreamlitInterface["Streamlit Interface"]
     end
 
-    UnifiedData[/Data Graph type/]
+    subgraph DataSources ["External Data Sources"]
+        Notion["Notion API"]
+        APIs@{ shape: processes, label: "Other APIs/resources" }
+    end
 
-    KnowledgeGraph[/"Knowledge Graph"/]
+    subgraph Flow ["User Flow"]
+	    User("👤 2. User")
+	    Prepare("🧠📩 1. Prepare knowledge")
+    end
     Neo4j[(Neo4j Graph Database)]
-    
-    QueryProcessor["Query Processor"]
-    
-    Interface["Streamlit Interface"]
-    User("👤 User")
-    Prepare("🧠📩 Prepare knowledge")
 
 
     %% Connections
-    Prepare-->Ingestion
-    NotionProvider-->Notion
-    TodoistProvider-.->Todoist
-    PocketProvider-.->Pocket
-    WebProvider-.->Web
+    Prepare-->|Initiate Data Ingestion|Ingestion
+    DataSources-->|Fetching Data|Ingestion
     Ingestion-->UnifiedData
     UnifiedData-->ProcessingPipeline
     ProcessingPipeline-->KnowledgeGraph
     KnowledgeGraph-->Neo4j
     QueryProcessor<-->Neo4j
-    Interface<-.->QueryProcessor
-    User<-.->|Intent or question|Interface
+    StreamlitInterface<-->QueryProcessor
+    User<-->|Asks question|StreamlitInterface
 
 
     %% Legend
     subgraph Legend
-        direction LR
+        %% direction LR
         Implemented["Implemented"]
         Future["Planned"]
     end
@@ -61,9 +66,10 @@ flowchart TB
     classDef implemented fill:#90EE90,stroke:#333,color:#000,stroke-width:2px;
     classDef future fill:#FFB6C1,stroke:#333,color:#000,stroke-width:2px,stroke-dasharray: 5 5;
 
-    classDef api fill:#FFFF00,stroke:#333,color:#000,stroke-width:2px;
+    classDef transparent fill:#E6E6FA,fill-opacity:0.1,stroke:#333,stroke-width:5px;
 
-    class Prepare,Notion,NotionProvider,Chunking,Embedding,QueryProcessor,KnowledgeGraph,Neo4j,User,UnifiedData implemented;
-    class Todoist,TodoistProvider,Pocket,PocketProvider,Web,WebProvider,EntityExtraction,TopicModeling,Clusterization,Interface future;
+    class Prepare,Notion,NotionProvider,Chunking,Embedding,QueryProcessor,KnowledgeGraph,Neo4j,User,UnifiedData,StreamlitInterface implemented;
+    class Todoist,TodoistProvider,APIs,CustomProviders,Web,WebProvider,EntityExtraction,TopicModeling,Clusterization future;
     class Implemented implemented;
     class Future future;
+    class IngestionApp,QnAApp transparent;
