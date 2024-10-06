@@ -1,0 +1,69 @@
+flowchart TB
+    subgraph DataSources ["Data Sources"]
+        Notion["Notion"]
+        Todoist["Todoist"]
+        Pocket["Pocket"]
+        Web["Web Pages"]
+    end
+
+    subgraph Ingestion ["Data Ingestion"]
+        direction TB
+        NotionProvider>"Notion Provider"]
+        TodoistProvider>"Todoist Provider"]
+        PocketProvider>"Pocket Provider"]
+        WebProvider>"Web Scrapper"]
+    end
+    
+    subgraph ProcessingPipeline ["Processing Pipeline"]
+        direction LR
+        Chunking[["Content Chunking"]]
+        EntityExtraction[["Entity Extraction"]]
+        TopicModeling[["Topic Modeling"]]
+        Clusterization[["Clusterization"]]
+        Embedding[["Embedding Generation"]]
+    end
+
+    UnifiedData[/Data Graph type/]
+
+    KnowledgeGraph[/"Knowledge Graph"/]
+    Neo4j[(Neo4j Graph Database)]
+    
+    QueryProcessor["Query Processor"]
+    
+    Interface["Streamlit Interface"]
+    User("👤 User")
+    Prepare("🧠📩 Prepare knowledge")
+
+
+    %% Connections
+    Prepare-->Ingestion
+    NotionProvider-->Notion
+    TodoistProvider-.->Todoist
+    PocketProvider-.->Pocket
+    WebProvider-.->Web
+    Ingestion-->UnifiedData
+    UnifiedData-->ProcessingPipeline
+    ProcessingPipeline-->KnowledgeGraph
+    KnowledgeGraph-->Neo4j
+    QueryProcessor<-->Neo4j
+    Interface<-.->QueryProcessor
+    User<-.->|Intent or question|Interface
+
+
+    %% Legend
+    subgraph Legend
+        direction LR
+        Implemented["Implemented"]
+        Future["Planned"]
+    end
+
+    %% Styling
+    classDef implemented fill:#90EE90,stroke:#333,color:#000,stroke-width:2px;
+    classDef future fill:#FFB6C1,stroke:#333,color:#000,stroke-width:2px,stroke-dasharray: 5 5;
+
+    classDef api fill:#FFFF00,stroke:#333,color:#000,stroke-width:2px;
+
+    class Prepare,Notion,NotionProvider,Chunking,Embedding,QueryProcessor,KnowledgeGraph,Neo4j,User,UnifiedData implemented;
+    class Todoist,TodoistProvider,Pocket,PocketProvider,Web,WebProvider,EntityExtraction,TopicModeling,Clusterization,Interface future;
+    class Implemented implemented;
+    class Future future;
