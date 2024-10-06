@@ -34,11 +34,6 @@
 
 ## 🌟 Project Overview
 
-![ingestion visualization](/docs/ingestion.png)
-
-High-level architecture of the Knowledge Nexus system:
-![architecture flowchart](/docs/flowchart-diagram.png)
-
 Knowledge Nexus is an advanced personal knowledge management system that transforms the way individuals organize,
 process, and discover insights from their digital content. By leveraging the power of AI and graph databases, this
 project addresses the challenge of information overload and disconnected data silos that many knowledge workers face in
@@ -47,6 +42,88 @@ today's digital landscape.
 Unlike traditional note-taking or knowledge management tools that rely heavily on manual organization, Knowledge Nexus
 automates the process of extracting key concepts, generating insights, and creating meaningful connections across your
 personal knowledge base.
+
+1. Data Ingestion:
+![ingestion visualization](/docs/ingestion.png)
+2. Talking to your data graph: 
+![ingestion visualization](/docs/streamlit.png)
+
+### High-level architecture:
+```mermaid
+flowchart TB
+
+    subgraph IngestionApp ["Ingestion Module"]
+        direction LR
+	    subgraph Ingestion ["Pluggable Data providers"]
+	        direction TB
+	        NotionProvider>"Notion Provider"]
+	        TodoistProvider>"Todoist Provider"]
+	        WebProvider>"Web Scrapper"]
+	        CustomProviders>"Custom Providers"]
+	    end
+
+	    subgraph ProcessingPipeline ["Processing Pipeline"]
+	        direction LR
+	        Chunking[["Content Chunking"]]
+	        EntityExtraction[["Entity Extraction"]]
+	        TopicModeling[["Topic Modeling"]]
+	        Clusterization[["Clusterization"]]
+	        Embedding[["Embedding Generation"]]
+	    end
+
+	    UnifiedData[/"Raw Graph
+	    (based on data structure)"/]
+
+	    KnowledgeGraph[/"Enriched Knowledge Graph
+	    (structure + semantic relations)"/]
+
+    end
+    subgraph QnAApp ["Q&A Module"]
+        QueryProcessor["Query Processor"]
+        StreamlitInterface["Streamlit Interface"]
+    end
+
+    subgraph DataSources ["External Data Sources"]
+        Notion["Notion API"]
+        APIs["Other APIs/resources"]
+    end
+
+    subgraph Flow ["User Flow"]
+	    User("👤 2. User")
+	    Prepare("🧠📩 1. Prepare knowledge")
+    end
+    Neo4j[(Neo4j Graph Database)]
+
+
+    %% Connections
+    Prepare-->|Initiate Data Ingestion|Ingestion
+    DataSources-->|Fetching Data|Ingestion
+    Ingestion-->UnifiedData
+    UnifiedData-->ProcessingPipeline
+    ProcessingPipeline-->KnowledgeGraph
+    KnowledgeGraph-->Neo4j
+    QueryProcessor<-->Neo4j
+    StreamlitInterface<-->QueryProcessor
+    User<-->|Asks question|StreamlitInterface
+
+
+    %% Legend
+    subgraph Legend
+        Implemented["Implemented"]
+        Future["Planned"]
+    end
+
+    %% Styling
+    classDef implemented fill:#90EE90,stroke:#333,color:#000,stroke-width:2px;
+    classDef future fill:#FFB6C1,stroke:#333,color:#000,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef transparent fill:#E6E6FA,fill-opacity:0.1,stroke:#333,stroke-width:5px;
+
+    class Prepare,Notion,NotionProvider,Chunking,Embedding,QueryProcessor,KnowledgeGraph,Neo4j,User,UnifiedData,StreamlitInterface implemented;
+    class Todoist,TodoistProvider,APIs,CustomProviders,Web,WebProvider,EntityExtraction,TopicModeling,Clusterization future;
+    class Implemented implemented;
+    class Future future;
+    class IngestionApp,QnAApp,Flow transparent;
+```
 
 ## 🎯 Key Challenges Addressed
 
