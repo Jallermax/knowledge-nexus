@@ -14,4 +14,4 @@ spacy~=3.7.5
 streamlit~=1.38.0
 pyvis~=0.3.2
 python-dateutil~=2.9.0.post0
-tiktoken~=0.7.0
+tiktoken~=0.8.0
