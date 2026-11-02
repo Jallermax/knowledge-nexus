@@ -1,5 +1,6 @@
 # Knowledge Nexus: Your AI-Powered Personal Knowledge Discovery Engine
 [![CI](https://github.com/Jallermax/knowledge-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Jallermax/knowledge-nexus/actions/workflows/ci.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Jallermax/knowledge-nexus)
 
 ## 🛠 Getting Started
 
